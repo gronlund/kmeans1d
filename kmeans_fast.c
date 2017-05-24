@@ -37,12 +37,12 @@ static double cimj(size_t i, size_t m, size_t j) {
 }
 
 
-static void reduce(size_t *rows, size_t *cols, size_t n, size_t m,
-                      size_t *cols_output, size_t reduce_i) {
+static void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
+                   size_t *cols_output, size_t reduce_i) {
     // n rows, m columns.
     // output is n rows and n columns.
-#ifdef DEBUG
-    printf("[reduce] n=%ld  m=%ld  reduce_i=%ld\n", n, m, reduce_i);
+#ifdef DEBUG_KMEANS
+    printf("[reduce] called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
 #endif
     size_t *prev_col = (size_t*) malloc(m * sizeof(size_t));
     size_t *next_col = (size_t*) malloc(m * sizeof(size_t));
@@ -56,11 +56,11 @@ static void reduce(size_t *rows, size_t *cols, size_t n, size_t m,
     size_t remaining_columns = m;
     size_t rowk = 0; // index in rows
     size_t colk = 0; // index in cols.
-    //printf("[reduce] called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
     while (remaining_columns > n) {
-        double val = -cimj(reduce_i, rows[rowk], cols[colk]);
+        double val = -cimj(reduce_i, row_multiplier * rowk, cols[colk]);
         //printf("rowk=%ld\n", rowk);
-        double next_val = -cimj(reduce_i, rows[rowk], cols[next_col[colk]]);
+        double next_val = -cimj(reduce_i, row_multiplier * rowk,
+                                cols[next_col[colk]]);
         if (val >= next_val && rowk < n-1) {
             rowk += 1;
             colk = next_col[colk];
@@ -123,18 +123,13 @@ static void reduce(size_t *rows, size_t *cols, size_t n, size_t m,
     return;
 }
 
-static void mincompute(size_t *rows, size_t *cols, size_t n, size_t m, size_t reduce_i,
+static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, size_t reduce_i,
                        size_t *cols_output) {
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
     printf("[mincompute] Called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
-    printf("[mincompute] input rows: ");
-    for (size_t i = 0; i < n; ++i) {
-        printf("%d  ", rows[i]);
-    }
-    printf("\n");
 #endif
     if (n == 1) {
-        size_t r = rows[0];
+        size_t r = 0; // r = rows[0]
         size_t idx = 0;
         double best = cimj(reduce_i, r, cols[0]);
         for (size_t i = 1; i < m; ++i) {
@@ -146,26 +141,23 @@ static void mincompute(size_t *rows, size_t *cols, size_t n, size_t m, size_t re
             }
         }
         cols_output[0] = cols[idx];
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
         printf("[mincompute] returning\n", n, m, reduce_i);
 #endif
         return;
     }
 
     size_t *cols_output_reduce = (size_t *) malloc(n * sizeof(size_t));
-    reduce(rows, cols, n, m, cols_output_reduce, reduce_i);
+    reduce(row_multiplier, cols, n, m, cols_output_reduce, reduce_i);
     size_t n_rec = (n + 1) / 2;
-    size_t *rows_recurse = (size_t *) malloc(n_rec * sizeof(size_t));
     size_t *output = (size_t *) malloc(n_rec * sizeof(size_t));
-    for (size_t i = 0; i < n_rec; i++) rows_recurse[i] = rows[2*i];
-    mincompute(rows_recurse, cols_output_reduce, n_rec, n, reduce_i, output);
-#ifdef DEBUG
+    mincompute(row_multiplier * 2, cols_output_reduce, n_rec, n, reduce_i, output);
+#ifdef DEBUG_KMEANS
     printf("[mincompute] n = %d\n", n);
     for (size_t i = 0; i < n_rec; ++i) {
         printf("[mincompute] output[%ld] = %ld\n", i, output[i]);
     }
 #endif
-    free(rows_recurse);
     free(cols_output_reduce);
     size_t first = 0; // index into cols.
     while (output[0] != cols[first]) ++first;
@@ -183,13 +175,14 @@ static void mincompute(size_t *rows, size_t *cols, size_t n, size_t m, size_t re
         size_t best_idx = current; // index into cols.
         double best = oo;
         for (size_t z = current; z <= end; ++z) {
-            double val = cimj(reduce_i, rows[i], cols[z]);
+            size_t rowsi = row_multiplier * i;
+            double val = cimj(reduce_i, rowsi, cols[z]);
             if (val < best) {
                 best = val;
                 best_idx = z;
             }
         }
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
         printf("[mincompute] %d: cols[best_idx] = %d\n", i, cols[best_idx]);
 #endif
         cols_output[i] = cols[best_idx];
@@ -197,7 +190,7 @@ static void mincompute(size_t *rows, size_t *cols, size_t n, size_t m, size_t re
     }
     for (size_t i = 0; i < n; i+=2) cols_output[i] = output[i/2];
     free(output);
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
     printf("[mincompute] reduce_i = %d   n = %d\n", reduce_i, n);
     for (size_t i = 0; i < n; ++i) {
         printf("[mincompute] cols_output[%d] = %d\n", i, cols_output[i]);
@@ -209,15 +202,13 @@ static void mincompute(size_t *rows, size_t *cols, size_t n, size_t m, size_t re
 
 static void fill_row2(size_t k) {
     size_t n = t.n;
-    size_t *rows = (size_t *) malloc(n * sizeof(size_t));
     size_t *cols = (size_t *) malloc(n * sizeof(size_t));
     size_t *output = (size_t *) malloc(n * sizeof(size_t));
     for (size_t i = 0; i < n; ++i) {
-        rows[i] = i;
         cols[i] = i;
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
     printf("Matrix cimj:\n");
     for (size_t i = 0; i < n; ++i) {
         for (size_t j = 0; j < n; ++j) {
@@ -227,17 +218,16 @@ static void fill_row2(size_t k) {
     }
     printf(" ------    fill_row2   k = %ld   ---------\n", k);
 #endif
-    mincompute(rows, cols, n, n, k, output);
+    mincompute(1, cols, n, n, k, output);
 
     for (size_t i = 0; i < n; ++i) {
-#ifdef DEBUG
+#ifdef DEBUG_KMEANS
         printf("output[%d] = %d\n", i, output[i]);
 #endif
         size_t row = i;
         size_t col = output[i];
         set(&t, k, i, cimj(k, row, col));
     }
-    free(rows);
     free(cols);
     free(output);
     return;
@@ -261,7 +251,7 @@ static void base_case(size_t k) {
 
 // static function not visible in other compilation units.
 static double kmeans(double *points, size_t n,
-                     double *centers, size_t k) {
+                     double *last_row, size_t k) {
     init_Table(&t, k + 1, n, 0.0);
     init_IntervalSum(&ps, points, n);
     base_case(k);
@@ -272,6 +262,11 @@ static double kmeans(double *points, size_t n,
     }
     //print_Table(&t);
     double ret = get(&t, k, n - 1);
+    if (last_row != 0) {
+        for (size_t i = 0; i < n; ++i) {
+            last_row[i] = get(&t, k, i);
+        }
+    }
     free_Table(&t);
     free_IntervalSum(&ps);
     return ret;

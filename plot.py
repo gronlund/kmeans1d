@@ -4,18 +4,17 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-def main(k_plot, constant=False):
-    print(k_plot)
-    with open('timing.csv') as time_file:
+CLOCKS_PER_SEC = 1000000
+
+def main(k_plot, constant=False, csvfilename='timing.csv'):
+    with open(csvfilename) as time_file:
         csv_reader = csv.reader(time_file)
         fasts = []
         medis = []
         ns = []
         first = True
+        headers = next(csv_reader)
         for row in csv_reader:
-            if first:
-                first = False
-                continue
             n = int(row[0].strip())
             k = int(row[1].strip())
             fast = int(row[2].strip())
@@ -38,8 +37,15 @@ def main(k_plot, constant=False):
             plt.legend(loc='upper left')
             plt.show()
         else:
-            plt.plot(ns, fasts, '-x', label='SMAWK')
-            plt.plot(ns, medis, '-o', label='Fast DP')
+            plt.plot(ns, fasts / CLOCKS_PER_SEC, '-x', label='SMAWK')
+            plt.plot(ns, medis / CLOCKS_PER_SEC, '-o', label='Fast DP')
+            last_n = ns[len(medis)-1]
+            step_size = 1500000
+            plt.xticks(np.arange(0, (int(last_n / step_size) + 2) * step_size, step_size))
+            plt.yticks(np.arange(0, (int(medis[-1]/1000000/25)+2)*25, 25))
+            plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+            plt.ylabel('Seconds')
+            plt.xlabel('Input size (n)')
             plt.legend(loc='upper left')
             plt.show()
 
@@ -51,5 +57,6 @@ if __name__ == "__main__":
     arg_parser.add_argument('-k', default=2, type=int)
     arg_parser.add_argument('--constant', default=False,
                             action='store_const', const=True)
+    arg_parser.add_argument('--file', default='timing.csv')
     args = arg_parser.parse_args()
-    main(args.k, args.constant)
+    main(args.k, args.constant, args.file)

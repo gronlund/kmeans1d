@@ -62,7 +62,7 @@ static void base_case(size_t k) {
 }
 
 static double kmeans(double *points, size_t n,
-                     double *centers, size_t k) {
+                     double *last_row, size_t k) {
     init_Table(&t, k + 1, n, 0.0);
     init_IntervalSum(&ps, points, n);
     base_case(k);
@@ -72,6 +72,9 @@ static double kmeans(double *points, size_t n,
         evict_row(&t, c-1);
     }
     double ret = get(&t, k, n - 1);
+    if (last_row != 0) {
+        for (size_t i = 0; i < n; ++i) last_row[i] = get(&t, k, i);
+    }
     free_Table(&t);
     free_IntervalSum(&ps);
     return ret;

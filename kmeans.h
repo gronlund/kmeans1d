@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 typedef double (*kmeans_fn)(double *points, size_t n,
-                            double *centers, size_t k);
+                            double *last_row, size_t k);
 
 
 kmeans_fn get_kmeans_slow();
@@ -14,5 +14,10 @@ kmeans_fn get_kmeans_medi();
 
 kmeans_fn get_kmeans_fast();
 
+kmeans_fn get_kmeans_lloyd();
+
+double report_clusters(double *points, size_t n,
+                     double *centers, size_t k,
+                     kmeans_fn);
 
 #endif /* __KMEANS_H__ */

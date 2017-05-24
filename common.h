@@ -55,5 +55,7 @@ double cost_interval_l2(struct IntervalSum *s,
 
 void free_IntervalSum(struct IntervalSum *s);
 
+double cost_l2(double *points, size_t n);
 
+double mean(double *points, size_t n);
 #endif /* __COMMON_H__ */

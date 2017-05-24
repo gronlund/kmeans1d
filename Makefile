@@ -1,8 +1,10 @@
-OBJS := run.o kmeans_slow.o kmeans_fast.o common.o kmeans_medi.o
-CFLAGS_RELEASE := -Wall -Wextra -O2
-CFLAGS_DEBUG := -g -Wall -Wextra -fsanitize=address
-CFLAGS := $(CFLAGS_RELEASE)
+OBJS := run.o kmeans_slow.o kmeans_fast.o common.o kmeans_medi.o kmeans_report.o kmeans_lloyd.o
+#OBJ2 := kmeans_lloyd.o
+CXXFLAGS_RELEASE := -Wall -Wextra -O2
+CXXFLAGS_DEBUG := -g -Wall -Wextra -fsanitize=address -DDEBUG
+CXXFLAGS := $(CXXFLAGS_RELEASE)
 EXEC := run
+CXX = g++
 
 all: $(EXEC)
 
@@ -10,9 +12,12 @@ clean:
 	$(RM) $(EXEC) $(OBJS) $(OBJS:.o=.d)
 
 $(EXEC): $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.d: %.c
-	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $< | sed "s/$*\\.o/& $@/g" > $@'
+	$(SHELL) -ec '$(CXX) -MM $(CXXFLAGS) $< | sed "s/$*\\.o/& $@/g" > $@'
 
 include $(OBJS:.o=.d)

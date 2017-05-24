@@ -83,3 +83,21 @@ void free_IntervalSum(struct IntervalSum *s) {
     free(s->prefix_sum);
     free(s->prefix_sum_of_squares);
 }
+
+double cost_l2(double *points, size_t n) {
+    double mean_val = mean(points, n);
+    double cost = 0;
+    for (size_t i = 0; i < n; ++i) {
+        cost += ((mean_val - points[i]) * (mean_val - points[i]));
+    }
+    return cost;
+}
+
+double mean(double *points, size_t n) {
+    double sum = 0;
+    for (size_t i = 0; i < n; ++i) {
+        sum += points[i];
+    }
+    double ret = sum / n;
+    return ret;
+}
