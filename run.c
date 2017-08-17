@@ -4,25 +4,6 @@
 
 #include "kmeans.h"
 
-void correctness_test_random() {
-    kmeans_fn fast = get_kmeans_fast();
-    kmeans_fn slow = get_kmeans_slow();
-    kmeans_fn medi = get_kmeans_medi();
-    size_t n = 20;
-    double points[20] = {0.0041841036041334601, 0.016864905913439476, 0.091539430201843741, 0.11167850389725253, 0.11729255208759837, 0.15870772838060987, 0.21537383129510801, 0.22030075252311732, 0.29234574608234609, 0.34182095515978905, 0.38064794144662972, 0.42369328807073692, 0.42898263636024347, 0.46299304217492687, 0.59849854723755469, 0.77144917504818644, 0.78318033400636167, 0.8393332644552387, 0.92763049366511063, 0.98685245969033264};
-    for (size_t k = 1; k < 10; ++k) {
-        double fast_res = fast(points, n, 0, k);
-        double slow_res = slow(points, n, 0, k);
-        double medi_res = medi(points, n, 0, k);
-        if (fast_res != slow_res || fast_res != medi_res) {
-            printf("Test failed    k=%ld\n", k);
-        }
-        double diff_fast_slow = abs(slow_res - fast_res);
-        double diff_fast_medi = abs(medi_res - fast_res);
-        printf("fast_res: %.10f\nmedi_res: %.10f\nslow_res: %.10f\n", fast_res, medi_res, slow_res);
-        printf("|slow_res-fast_res|: %.10f\n|medi_res-fast_res|: %.10f\n", diff_fast_slow, diff_fast_medi);
-    }
-}
 
 void timing_tests() {
     kmeans_fn fast = get_kmeans_fast();

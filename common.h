@@ -2,6 +2,10 @@
 #define __COMMON_H__
 
 #include "stdlib.h"
+#include <random>
+
+void set_seed(std::mt19937::result_type val);
+std::mt19937::result_type random_value();
 
 struct Table {
     size_t k, n;

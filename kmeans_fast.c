@@ -3,6 +3,10 @@
 #include "common.h"
 #include "assert.h"
 #include "stdlib.h"
+/**
+ * This code implements the matrix searching algorithm
+ * for computing k-means.
+ */
 
 static double oo = DBL_MAX;
 
@@ -14,13 +18,12 @@ static double CC(size_t j, size_t m) {
 }
 
 /**
- * @param is the number of clusters / row of the matrix.
+ * @param i is the number of clusters / row of the matrix.
  * @param m is the last point of the clustering.
  * @param j is the first point of the last cluster.
- * @return C_i[m][j]
+ * @return C_i[m][j] in the the 1D kmeans paper.
  */
 static double cimj(size_t i, size_t m, size_t j) {
-    // approved for {1.0, 2.0, 3.0, 4.0, 5.0} and 2 clusters.
     assert(i > 0);
     if (m < j) {
         double best_before = get(&t, i-1, m);
@@ -33,7 +36,6 @@ static double cimj(size_t i, size_t m, size_t j) {
         double last_cluster_cost = CC(j, m);
         return last_cluster_cost + best_before;
     }
-
 }
 
 

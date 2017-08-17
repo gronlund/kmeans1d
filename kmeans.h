@@ -16,8 +16,12 @@ kmeans_fn get_kmeans_fast();
 
 kmeans_fn get_kmeans_lloyd();
 
+kmeans_fn get_kmeans_lloyd_slow();
+
+kmeans_fn get_kmeans_hirsch_larmore();
+
 double report_clusters(double *points, size_t n,
-                     double *centers, size_t k,
-                     kmeans_fn);
+                       double *centers, size_t k,
+                       kmeans_fn);
 
 #endif /* __KMEANS_H__ */

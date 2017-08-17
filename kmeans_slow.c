@@ -1,6 +1,10 @@
 #include "kmeans.h"
 #include "float.h"
 #include "common.h"
+/**
+ * This code implements the dynamic programming algorithm
+ * for computing k-means.
+ */
 
 static double oo = DBL_MAX;
 static struct IntervalSum ps;

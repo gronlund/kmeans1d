@@ -2,6 +2,25 @@
 #include "stdlib.h"
 #include "assert.h"
 #include "stdio.h"
+#include <chrono>
+#include <ctime>
+#include <random>
+#include <iostream>
+
+// this seems verbose:
+//std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())
+// this is better: std::time(nullptr)
+static std::mt19937_64 mt(std::time(nullptr));
+
+void set_seed(std::mt19937::result_type val) {
+    mt.seed(val);
+    return;
+}
+
+std::mt19937::result_type random_value() {
+    std::mt19937::result_type val = mt();
+    return val;
+}
 
 void init_Table(struct Table *t, size_t k, size_t n, double init_val) {
     t->n = n;
@@ -73,8 +92,8 @@ double cost_interval_l2(struct IntervalSum *s,
                                int64_t start, size_t i) {
     double suffix_sum = query(s, start, i+1);
     double suffix_sq = query_sq(s, start, i+1);
-    double mean = suffix_sum / (i-start+1);
     size_t length = i-start+1;
+    double mean = suffix_sum / length;
     double interval_cost = suffix_sq + mean*mean*length - 2 * suffix_sum * mean;
     return interval_cost;
 }
