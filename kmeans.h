@@ -23,7 +23,7 @@ public:
     virtual std::unique_ptr<kmeans_result> compute(size_t k) = 0;
 };
 
-class kmeans_hirschberg_larmore : public virtual kmeans {
+class kmeans_hirschberg_larmore : public kmeans {
 public:
     kmeans_hirschberg_larmore(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
@@ -43,16 +43,32 @@ private:
     std::size_t n;
 };
 
-class kmeans_slow : public virtual kmeans {
+class kmeans_medi : public kmeans {
+public:
+    kmeans_medi(const std::vector<double> &points);
+    std::unique_ptr<kmeans_result> compute(size_t k) override;
+private:
+
+    void fill_row_rec(size_t begin, size_t end, size_t k,
+                      int64_t split_left, int64_t split_right);
+    void fill_row(size_t k);
+    interval_sum<double> is;
+    std::vector<double> row;
+    std::vector<double> row_prev;
+    size_t n;
+};
+
+class kmeans_slow : public kmeans {
 public:
     kmeans_slow(const std::vector<double> &points);
-    std::unique_ptr<kmeans_result> compute(size_t k);
+    std::unique_ptr<kmeans_result> compute(size_t k) override;
 private:
     interval_sum<double> is;
     std::vector<double> row;
     std::vector<double> row_prev;
     size_t n;
 };
+
 
 typedef double (*kmeans_fn)(double *points, size_t n,
                             double *last_row, size_t k);
