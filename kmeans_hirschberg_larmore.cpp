@@ -7,35 +7,72 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include "kmeans.h"
 #include "common.h"
+#include "interval_sum.hpp"
 
 static double lambda = 0;
-static IntervalSum is;
+static interval_sum<double> is;
 
 static std::vector<double> f;
 static std::vector<size_t> bestleft;
 
+kmeans_hirschberg_larmore::kmeans_hirschberg_larmore(const std::vector<double> &points) :
+    f(points.size() + 1, 0.0), bestleft(points.size() + 1, 0),
+    is(points), n(points.size()) { }
 
+std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
+    std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
+    if (k == 1) {
+        kmeans_res->cost = is.cost_interval_l2(0, n-1);
+        kmeans_res->centers.push_back(is.query(0, n) / ((double) n));
+        return kmeans_res;
+    }
 
-static void init(double *points_input, size_t n) {
-    init_IntervalSum(&is, points_input, n);
+    double lo = 0.0;
+    double hi = 2 * is.cost_interval_l2(0, n-1);
+
+    double val_found, best_val;
+    size_t k_found;
+    while (hi - lo > 1e-10) {
+        double mid = lo + (hi-lo) / 2.0;
+        lambda = mid;
+        std::tie(val_found, k_found) = this->basic(n);
+        if (k_found > k) {
+            lo = mid;
+        } else if (k_found < k) {
+            hi = mid;
+        } else {
+            hi = mid;
+            break;
+        }
+    }
+    lambda = hi;
+    std::tie(val_found, k_found) = this->basic(n);
+    assert(k == k_found);
+    //double cost = val_found - k_found * lambda; // this is imprecise
+    double cost = get_actual_cost(n, 0);
+    kmeans_res->cost = cost;
+    return kmeans_res;
 }
 
-static double weight(size_t i, size_t j) {
+kmeans_hirschberg_larmore::~kmeans_hirschberg_larmore() {}
+
+double kmeans_hirschberg_larmore::weight(size_t i, size_t j) {
     assert(i < j);
-    return cost_interval_l2(&is, i, j-1) + lambda;
+    return is.cost_interval_l2(i, j-1) + lambda;
 }
 
-static double g(size_t i, size_t j) {
+double kmeans_hirschberg_larmore::g(size_t i, size_t j) {
     return f[i] + weight(i, j);
 }
 
-static bool bridge(size_t i, size_t j, size_t k, size_t n) {
+bool kmeans_hirschberg_larmore::bridge(size_t i, size_t j, size_t k, size_t n) {
     if (k == n) {
         return true;
     }
@@ -56,32 +93,7 @@ static bool bridge(size_t i, size_t j, size_t k, size_t n) {
     return result;
 }
 
-static std::pair<double, size_t> traditional(size_t n) {
-    f.resize(n, 0);
-    for (size_t i = 0; i < n; ++i) f[i] = 0;
-    bestleft.resize(n, 0);
-    for (size_t i = 0; i < n; ++i) bestleft[i] = 0;
-
-    for (size_t m = 1; m < n; ++m) {
-        f[m] = g(0, m);
-        bestleft[m] = 0;
-        for (size_t i = 1; i < m; ++i) {
-            if (g(i, m) < f[m]) {
-                f[m] = g(i, m);
-                bestleft[m] = i;
-            }
-        }
-    }
-    size_t m = n-1;
-    size_t length = 0;
-    while (m > 0) {
-        m = bestleft[m];
-        ++length;
-    }
-    return std::make_pair(f[n-1], length);
-}
-
-static std::pair<double, size_t> basic(size_t n) {
+std::pair<double, size_t> kmeans_hirschberg_larmore::basic(size_t n) {
     f.resize(n+1, 0);
     for (size_t i = 0; i <= n; ++i) f[i] = 0;
     bestleft.resize(n+1, 0);
@@ -120,15 +132,15 @@ static std::pair<double, size_t> basic(size_t n) {
     return std::make_pair(f[n], length);
 }
 
-static double get_actual_cost(size_t n, double *centers_ptr) {
+double kmeans_hirschberg_larmore::get_actual_cost(size_t n, double *centers_ptr) {
     double cost = 0.0;
     size_t m = n;
 
     std::vector<double> centers;
     while (m != 0) {
         size_t prev = bestleft[m];
-        cost += cost_interval_l2(&is, prev, m-1);
-        double avg = query(&is, prev, m-1) / (m - prev - 1);
+        cost += is.cost_interval_l2(prev, m-1);
+        double avg = is.query(prev, m-1) / (m - prev - 1);
         centers.push_back(avg);
         m = prev;
 
@@ -141,38 +153,43 @@ static double get_actual_cost(size_t n, double *centers_ptr) {
     return cost;
 }
 
-static double kmeans(double *points, size_t n, double *centers_ptr, size_t k) {
-    init(points, n);
-    if (k == 1) { return cost_interval_l2(&is, 0, n-1); }
+std::pair<double, size_t> kmeans_hirschberg_larmore::traditional(size_t n) {
+    f.resize(n, 0);
+    for (size_t i = 0; i < n; ++i) f[i] = 0;
+    bestleft.resize(n, 0);
+    for (size_t i = 0; i < n; ++i) bestleft[i] = 0;
 
-    double lo = 0.0;
-    double hi = 2 * cost_interval_l2(&is, 0, n-1);
-
-    double val_found, best_val;
-    size_t k_found;
-    while (hi - lo > 1e-10) {
-        double mid = lo + (hi-lo) / 2.0;
-        lambda = mid;
-        std::tie(val_found, k_found) = basic(n);
-        if (k_found > k) {
-            lo = mid;
-        } else if (k_found < k) {
-            hi = mid;
-        } else {
-            hi = mid;
-            break;
+    for (size_t m = 1; m < n; ++m) {
+        f[m] = g(0, m);
+        bestleft[m] = 0;
+        for (size_t i = 1; i < m; ++i) {
+            if (g(i, m) < f[m]) {
+                f[m] = g(i, m);
+                bestleft[m] = i;
+            }
         }
     }
-    lambda = hi;
-    std::tie(val_found, k_found) = basic(n);
-    assert(k == k_found);
-    //double cost = val_found - k_found * lambda; // this is imprecise
-    double cost = get_actual_cost(n, centers_ptr);
-    free_IntervalSum(&is);
-    return cost;
+    size_t m = n-1;
+    size_t length = 0;
+    while (m > 0) {
+        m = bestleft[m];
+        ++length;
+    }
+    return std::make_pair(f[n-1], length);
+}
+
+static double kmeans_object_oriented(double *points_ptr, size_t n, double *centers_ptr, size_t k) {
+    std::vector<double> points(n, 0);
+    for (size_t i = 0; i < n; ++i) points[i] = points_ptr[i];
+    kmeans_hirschberg_larmore kmeans_hirsch(points);
+    std::unique_ptr<kmeans_result> kmeans_res = kmeans_hirsch.compute(k);
+    if (centers_ptr) {
+        for (size_t i = 0; i < k; ++i) centers_ptr[i] = kmeans_res->centers[i];
+    }
+    return kmeans_res->cost;
 }
 
 
 kmeans_fn get_kmeans_hirsch_larmore() {
-    return kmeans;
+    return kmeans_object_oriented;
 }

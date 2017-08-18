@@ -1,5 +1,6 @@
 OBJS := kmeans_slow.o kmeans_fast.o common.o kmeans_medi.o \
-	kmeans_report.o kmeans_lloyd.o kmeans_hirschberg_larmore.o
+	kmeans_report.o kmeans_lloyd.o kmeans_hirschberg_larmore.o \
+	interval_sum.o
 CXXFLAGS_RELEASE := -Wall -Wextra -O2
 CXXFLAGS_DEBUG := -g -Wall -Wextra -fPIE -fsanitize=undefined -DDEBUG #-fsanitize=address
 CXXFLAGS := $(CXXFLAGS_DEBUG)
