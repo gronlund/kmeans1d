@@ -39,15 +39,15 @@ void correctness_test_random() {
             cout << "[k = " << k << "] Test failed for fast" << endl;
             fail = true;
         } else {
-            cout << "[k = " << k << "] Test succeeded for fast" << endl;
+            cout << "[k = " << k << "] Test succeeded for slow" << endl;
         }
-        if (fast_res != medi_res) {
+        if (slow_res != medi_res) {
             cout << "[k = " << k << "] Test failed for medi" << endl;
             fail = true;
         } else {
             cout << "[k = " << k << "] Test succeeded for medi" << endl;
         }
-        if (fast_res != hirc_res) {
+        if (slow_res != hirc_res) {
             cout << "[k = " << k << "] Test failed for hirc" << endl;
             fail = true;
         } else {

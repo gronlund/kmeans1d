@@ -43,6 +43,17 @@ private:
     std::size_t n;
 };
 
+class kmeans_slow : public virtual kmeans {
+public:
+    kmeans_slow(const std::vector<double> &points);
+    std::unique_ptr<kmeans_result> compute(size_t k);
+private:
+    interval_sum<double> is;
+    std::vector<double> row;
+    std::vector<double> row_prev;
+    size_t n;
+};
+
 typedef double (*kmeans_fn)(double *points, size_t n,
                             double *last_row, size_t k);
 
