@@ -8,7 +8,6 @@
 using namespace std;
 
 void correctness_test_random() {
-    bool fail = false;
     kmeans_fn fast = get_kmeans_fast();
     kmeans_fn slow = get_kmeans_slow();
     kmeans_fn medi = get_kmeans_medi();
@@ -25,6 +24,7 @@ void correctness_test_random() {
                          0.78318033400636167, 0.8393332644552387,
                          0.92763049366511063, 0.98685245969033264};
     printf("Running tests for fast, slow and medi algorithms.\n");
+    bool any_fail = false;
     for (size_t k = 1; k < 10; ++k) {
         set_seed(0);
         double fast_res = fast(points, n, 0, k);
@@ -34,40 +34,47 @@ void correctness_test_random() {
         double medi_res = medi(points, n, 0, k);
         set_seed(0);
         double hirc_res = hirc(points, n, 0, k);
+        bool fail = false;
         if (fast_res != slow_res) {
-            printf("Test failed    k=%ld\n", k);
-            printf("    fast and slow disagree on cost.");
-            printf(" (fast: %.10f   slow: %.10f)\n", fast_res, slow_res);
+            cout << "[k = " << k << "] Test failed for fast" << endl;
             fail = true;
+        } else {
+            cout << "[k = " << k << "] Test succeeded for fast" << endl;
         }
         if (fast_res != medi_res) {
-            printf("Test failed    k=%ld\n", k);
-            printf("    fast and medi disagree on cost.");
-            printf("(fast: %.10f   medi: %.10f)\n", fast_res, medi_res);
+            cout << "[k = " << k << "] Test failed for medi" << endl;
             fail = true;
+        } else {
+            cout << "[k = " << k << "] Test succeeded for medi" << endl;
         }
         if (fast_res != hirc_res) {
-            printf("Test failed    k=%ld\n", k);
-            printf("    fast and hirc disagree on cost.");
-            printf("(fast: %.10f   hirc: %.10f)\n", fast_res, hirc_res);
+            cout << "[k = " << k << "] Test failed for hirc" << endl;
             fail = true;
+        } else {
+            cout << "[k = " << k << "] Test succeeded for hirc" << endl;
         }
-        double diff_fast_slow = abs(slow_res - fast_res);
-        double diff_fast_medi = abs(medi_res - fast_res);
-        double diff_fast_hirc = abs(hirc_res - fast_res);
         if (fail) {
-            printf("fast_res: %.10f\nmedi_res: %.10f\nslow_res: %.10f\n",
-                   fast_res, medi_res, slow_res);
-            printf("|slow_res-fast_res|: %.10f\n|medi_res-fast_res|: %.10f\n",
-                   diff_fast_slow, diff_fast_medi);
-            printf("|hirc_res-fast_res|: %.10f\n", diff_fast_hirc);
+            any_fail = true;
+            double diff_fast_slow = abs(fast_res - slow_res);
+            double diff_medi_slow = abs(medi_res - slow_res);
+            double diff_hirc_slow = abs(hirc_res - slow_res);
 
+            cout << "[k = " << k << "] Failed" << endl;
+            cout << "Additional info below:" << endl;
+            cout << "[k = " << k << "] ";
+            cout << "|fast - slow| = " << setprecision(10) << diff_fast_slow << endl;
+
+            cout << "[k = " << k << "] ";
+            cout << "|medi - slow| = " << setprecision(10) << diff_medi_slow << endl;
+
+            cout << "[k = " << k << "] ";
+            cout << "|hirc - slow| = " << setprecision(10) << diff_hirc_slow << endl;
         }
     }
-    if (fail) {
-        cout << "Tests failed for fast, slow, medi, and hirc algorithm." << endl;
+    if (any_fail) {
+        cout << "[correctness_test_random] Failed" << endl;
     } else {
-        cout << "Tests succeeded for fast, slow, medi, and hirc algorithm." << endl;
+        cout << "[correctness_test_random] Succeeded" << endl;
     }
 }
 
@@ -153,8 +160,12 @@ void another() {
          << "diff  : " << setprecision(10) << diff << endl;
 }
 
+void more_clusters_than_points() {
+    // TODO: test it.
+}
+
 void small() {
-    double points[] = {1.0, 2.0, 3e300, 4e300};
+    double points[] = {1.0, 2.0};
     size_t n = 2;
     size_t k = 2;
     kmeans_fn hirsch = get_kmeans_hirsch_larmore();

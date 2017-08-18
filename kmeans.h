@@ -4,6 +4,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// class kmeans {
+//  public:
+//     virtual ~kmeans() {};
+//     virtual void compute() = 0;
+// };
+
+// class kmeans_hirschberg_larmore : public virtual kmeans {
+//  public:
+//     kmeans_hirschberg_larmore();
+//     void compute() override;
+//     ~kmeans_hirschberg_larmore() override;
+// };
+
 typedef double (*kmeans_fn)(double *points, size_t n,
                             double *last_row, size_t k);
 
