@@ -43,6 +43,21 @@ private:
     std::size_t n;
 };
 
+class kmeans_fast : public kmeans {
+public:
+    kmeans_fast(const std::vector<double> &points);
+    std::unique_ptr<kmeans_result> compute(size_t k) override;
+private:
+    interval_sum<double> is;
+    double cimj(size_t i, size_t m, size_t j);
+    void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
+                size_t *cols_output, size_t reduce_i);
+    void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m,
+                    size_t reduce_i, size_t *cols_output);
+    void fill_row(size_t k);
+    void base_case(size_t k);
+};
+
 class kmeans_medi : public kmeans {
 public:
     kmeans_medi(const std::vector<double> &points);

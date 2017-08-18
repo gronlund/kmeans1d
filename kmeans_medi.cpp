@@ -3,14 +3,11 @@
 #include "common.h"
 
 #include <limits>
+#include <memory>
 /**
  * This code implements the divide-and-conquer algorithm
  * for computing k-means.
  */
-
-static double oo = DBL_MAX;
-static struct IntervalSum ps;
-static struct Table t;
 
 
 kmeans_medi::kmeans_medi(const std::vector<double> &points) : is(points), n(points.size()) { }
@@ -19,8 +16,8 @@ void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
                                int64_t split_left, int64_t split_right) {
 
     size_t mid = (begin+end)/2;
-
-    double best = std::numeric_limits<double>::max();
+    double oo = std::numeric_limits<double>::max();
+    double best = oo;
     int64_t best_split = mid;
     for (int64_t s = split_left; s <= split_right && s <= mid; ++s) {
         double cost_last_cluster = is.cost_interval_l2(s, mid);
