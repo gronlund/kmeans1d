@@ -56,7 +56,7 @@ std::unique_ptr<kmeans_result> kmeans_medi::compute(size_t k) {
         row[i] = is.cost_interval_l2(0, i);
     }
 
-    for (size_t _k = 2; k <= k; ++k) {
+    for (size_t _k = 2; _k <= k; ++_k) {
         std::swap(row, row_prev);
         fill_row(_k);
     }

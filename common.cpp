@@ -18,7 +18,7 @@ void set_seed(std::mt19937::result_type val) {
 }
 
 std::mt19937::result_type random_value() {
-    std::mt19937::result_type val = mt();
+    auto val = mt();
     return val;
 }
 

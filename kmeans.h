@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <memory>
+#include <random>
 #include <utility>
 
 #include "interval_sum.hpp"
@@ -48,14 +49,18 @@ public:
     kmeans_fast(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
 private:
-    interval_sum<double> is;
     double cimj(size_t i, size_t m, size_t j);
-    void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
-                size_t *cols_output, size_t reduce_i);
-    void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m,
-                    size_t reduce_i, size_t *cols_output);
+    void reduce(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+                std::vector<size_t> &cols_output, size_t reduce_i);
+    void mincompute(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+                    size_t reduce_i, std::vector<size_t> &cols_output);
     void fill_row(size_t k);
     void base_case(size_t k);
+
+    interval_sum<double> is;
+    std::vector<double> row;
+    std::vector<double> row_prev;
+    size_t n;
 };
 
 class kmeans_medi : public kmeans {
@@ -84,22 +89,40 @@ private:
     size_t n;
 };
 
+class kmeans_lloyd : public kmeans {
+public:
+    kmeans_lloyd();
+    virtual std::unique_ptr<kmeans_result> compute(size_t k) = 0;
+    virtual void set_seed(std::mt19937::result_type val);
+    std::mt19937::result_type random_value();
+    std::vector<size_t> init_splits(size_t n, size_t k);
+private:
+    std::mt19937_64 mt;
+};
+
+class kmeans_lloyd_slow : public kmeans_lloyd {
+public:
+    kmeans_lloyd_slow(const std::vector<double> &points);
+    std::unique_ptr<kmeans_result> compute(size_t k) override;
+private:
+    std::vector<double> points;
+    interval_sum<double> is;
+    size_t n;
+};
+
+class kmeans_lloyd_fast : public kmeans_lloyd {
+public:
+    kmeans_lloyd_fast(const std::vector<double> &points);
+    std::unique_ptr<kmeans_result> compute(size_t k) override;
+private:
+    std::vector<double> points;
+    interval_sum<double> is;
+    size_t n;
+};
 
 typedef double (*kmeans_fn)(double *points, size_t n,
                             double *last_row, size_t k);
 
-
-kmeans_fn get_kmeans_slow();
-
-kmeans_fn get_kmeans_medi();
-
-kmeans_fn get_kmeans_fast();
-
-kmeans_fn get_kmeans_lloyd();
-
-kmeans_fn get_kmeans_lloyd_slow();
-
-kmeans_fn get_kmeans_hirsch_larmore();
 
 double report_clusters(double *points, size_t n,
                        double *centers, size_t k,

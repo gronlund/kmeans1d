@@ -28,6 +28,10 @@ kmeans_hirschberg_larmore::kmeans_hirschberg_larmore(const std::vector<double> &
 
 std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
+    if (k >= n) {
+        kmeans_res->cost = 0.0;
+        return kmeans_res;
+    }
     if (k == 1) {
         kmeans_res->cost = is.cost_interval_l2(0, n-1);
         kmeans_res->centers.push_back(is.query(0, n) / ((double) n));

@@ -7,14 +7,24 @@
  * This code implements the matrix searching algorithm
  * for computing k-means.
  */
-
 static double oo = DBL_MAX;
 
-static struct Table t;
-static struct IntervalSum ps;
+kmeans_fast::kmeans_fast(const std::vector<double> &points) : is(points),
+                                                              row(points.size(), 0),
+                                                              row_prev(points.size(), 0),
+                                                              n(points.size()) { }
 
-static double CC(size_t j, size_t m) {
-    return cost_interval_l2(&ps, j, m);
+std::unique_ptr<kmeans_result> kmeans_fast::compute(size_t k) {
+    std::unique_ptr<kmeans_result> res(new kmeans_result);
+    res->cost = 0.0;
+
+    base_case(k);
+    for (size_t c = 2; c <= k; ++c) {
+        std::swap(row_prev, row);
+        fill_row(c);
+    }
+    res->cost = row[n-1];
+    return res;
 }
 
 /**
@@ -23,31 +33,29 @@ static double CC(size_t j, size_t m) {
  * @param j is the first point of the last cluster.
  * @return C_i[m][j] in the the 1D kmeans paper.
  */
-static double cimj(size_t i, size_t m, size_t j) {
+double kmeans_fast::cimj(size_t i, size_t m, size_t j) {
     assert(i > 0);
     if (m < j) {
-        double best_before = get(&t, i-1, m);
-        return best_before;
+        return row_prev[m];
     } else {
         if (j == 0) {
-            return CC(0, m);
+            return is.cost_interval_l2(0, m);
         }
-        double best_before = get(&t, i-1, j-1);
-        double last_cluster_cost = CC(j, m);
+        double best_before = row_prev[j-1];
+        double last_cluster_cost = is.cost_interval_l2(j, m);
         return last_cluster_cost + best_before;
     }
 }
 
-
-static void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
-                   size_t *cols_output, size_t reduce_i) {
+void kmeans_fast::reduce(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+                         std::vector<size_t> &cols_output, size_t reduce_i) {
     // n rows, m columns.
     // output is n rows and n columns.
 #ifdef DEBUG_KMEANS
     printf("[reduce] called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
 #endif
-    size_t *prev_col = (size_t*) malloc(m * sizeof(size_t));
-    size_t *next_col = (size_t*) malloc(m * sizeof(size_t));
+    std::vector<size_t> prev_col(m, 0);
+    std::vector<size_t> next_col(m, 0);
     for (size_t i = 1; i < m; ++i) {
         prev_col[i] = i-1;
         next_col[i] = i+1;
@@ -109,7 +117,6 @@ static void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
             next_col[old_colk] = m;
             --remaining_columns;
         }
-
     }
 
     // generate output.
@@ -120,13 +127,10 @@ static void reduce(size_t row_multiplier, size_t *cols, size_t n, size_t m,
             ++j;
         }
     }
-    free(next_col);
-    free(prev_col);
-    return;
 }
 
-static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, size_t reduce_i,
-                       size_t *cols_output) {
+void kmeans_fast::mincompute(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+                             size_t reduce_i, std::vector<size_t> &cols_output) {
 #ifdef DEBUG_KMEANS
     printf("[mincompute] Called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
 #endif
@@ -149,10 +153,10 @@ static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, 
         return;
     }
 
-    size_t *cols_output_reduce = (size_t *) malloc(n * sizeof(size_t));
+    std::vector<size_t> cols_output_reduce(n, 0);
     reduce(row_multiplier, cols, n, m, cols_output_reduce, reduce_i);
     size_t n_rec = (n + 1) / 2;
-    size_t *output = (size_t *) malloc(n_rec * sizeof(size_t));
+    std::vector<size_t> output(n_rec, 0);
     mincompute(row_multiplier * 2, cols_output_reduce, n_rec, n, reduce_i, output);
 #ifdef DEBUG_KMEANS
     printf("[mincompute] n = %d\n", n);
@@ -160,7 +164,8 @@ static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, 
         printf("[mincompute] output[%ld] = %ld\n", i, output[i]);
     }
 #endif
-    free(cols_output_reduce);
+    { std::vector<size_t> empty; std::swap(empty, cols_output_reduce); }
+
     size_t first = 0; // index into cols.
     while (output[0] != cols[first]) ++first;
 
@@ -191,7 +196,7 @@ static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, 
         first = end;
     }
     for (size_t i = 0; i < n; i+=2) cols_output[i] = output[i/2];
-    free(output);
+    { std::vector<size_t> empty; std::swap(empty, output); };
 #ifdef DEBUG_KMEANS
     printf("[mincompute] reduce_i = %d   n = %d\n", reduce_i, n);
     for (size_t i = 0; i < n; ++i) {
@@ -202,10 +207,9 @@ static void mincompute(size_t row_multiplier, size_t *cols, size_t n, size_t m, 
     return;
 }
 
-static void fill_row2(size_t k) {
-    size_t n = t.n;
-    size_t *cols = (size_t *) malloc(n * sizeof(size_t));
-    size_t *output = (size_t *) malloc(n * sizeof(size_t));
+void kmeans_fast::fill_row(size_t k) {
+    std::vector<size_t> cols(n, 0);
+    std::vector<size_t> output(n, 0);
     for (size_t i = 0; i < n; ++i) {
         cols[i] = i;
     }
@@ -228,53 +232,28 @@ static void fill_row2(size_t k) {
 #endif
         size_t row = i;
         size_t col = output[i];
-        set(&t, k, i, cimj(k, row, col));
+        this->row[i] = cimj(k, row, col);
     }
-    free(cols);
-    free(output);
-    return;
 }
 
-
-static void base_case(size_t k) {
-    size_t n = t.n;
+void kmeans_fast::base_case(size_t k) {
     for (size_t i = 0; i < n; ++i) {
-        double cost = cost_interval_l2(&ps, 0, i);
-        set(&t, 1, i, cost);
+        double cost = is.cost_interval_l2(0, i);
+        row[i] = cost;
     }
-    set(&t, 1, 0, 0.0);
-
-    for (size_t j = 1; j <= k; ++j) {
-        set(&t, j, 0, 0.0);
-    }
-    return;
+    row[0] = 0.0;
 }
 
-
-// static function not visible in other compilation units.
-static double kmeans(double *points, size_t n,
-                     double *last_row, size_t k) {
-    init_Table(&t, k + 1, n, 0.0);
-    init_IntervalSum(&ps, points, n);
-    base_case(k);
-    evict_row(&t, 0);
-    for (size_t c = 2; c <= k; ++c) {
-        fill_row2(c);
-        evict_row(&t, c-1);
-    }
-    //print_Table(&t);
-    double ret = get(&t, k, n - 1);
-    if (last_row != 0) {
-        for (size_t i = 0; i < n; ++i) {
-            last_row[i] = get(&t, k, i);
-        }
-    }
-    free_Table(&t);
-    free_IntervalSum(&ps);
-    return ret;
+static double kmeans_object_oriented(double *points_ptr, size_t n,
+                                     double *last_row, size_t k) {
+    std::vector<double> points(n, 0);
+    for (size_t i = 0; i < n; ++i) points[i] = points_ptr[i];
+    kmeans_fast kmeans_algorithm(points);
+    std::unique_ptr<kmeans_result> kmeans_res = kmeans_algorithm.compute(k);
+    return kmeans_res->cost;
 }
 
 kmeans_fn get_kmeans_fast() {
-  return kmeans;
+    return kmeans_object_oriented;
 }
 
