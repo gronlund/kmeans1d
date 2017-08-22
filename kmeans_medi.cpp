@@ -1,6 +1,4 @@
 #include "kmeans.h"
-#include "float.h"
-#include "common.h"
 
 #include <limits>
 #include <memory>

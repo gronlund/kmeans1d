@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "kmeans.h"
-#include "common.h"
 #include "interval_sum.hpp"
 /**
  * This code implements lloyds algorithm using binary searches

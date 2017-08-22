@@ -1,13 +1,11 @@
 #include "kmeans.h"
-#include "float.h"
-#include "common.h"
-#include "assert.h"
-#include "stdlib.h"
+#include <cassert>
+#include <limits>
 /**
  * This code implements the matrix searching algorithm
  * for computing k-means.
  */
-static double oo = DBL_MAX;
+static double oo = std::numeric_limits<double>::max();
 
 kmeans_fast::kmeans_fast(const std::vector<double> &points) : kmeans_dp(points) { }
 

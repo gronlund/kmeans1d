@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "kmeans.h"
-#include "common.h"
 #include "interval_sum.hpp"
 
 static double lambda = 0;

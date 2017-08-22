@@ -5,7 +5,6 @@
 #include <sstream>
 
 #include "kmeans.h"
-#include "common.h"
 
 using namespace std;
 
