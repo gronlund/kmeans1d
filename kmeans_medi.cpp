@@ -10,7 +10,11 @@
  */
 
 
-kmeans_medi::kmeans_medi(const std::vector<double> &points) : is(points), n(points.size()) { }
+kmeans_medi::kmeans_medi(const std::vector<double> &points) : kmeans_dp(points) { }
+
+std::unique_ptr<kmeans_dp> kmeans_medi::get_instance(std::vector<double> &points) {
+    return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
+}
 
 void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
                                int64_t split_left, int64_t split_right) {

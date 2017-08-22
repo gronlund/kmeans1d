@@ -60,9 +60,12 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     std::tie(val_found, k_found) = this->basic(n);
     assert(k == k_found);
     //double cost = val_found - k_found * lambda; // this is imprecise
-    double cost = get_actual_cost(n, 0);
-    kmeans_res->cost = cost;
+    double cost = get_actual_cost(n, kmeans_res);
     return kmeans_res;
+}
+
+std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute_and_report(size_t k) {
+    return compute(k);
 }
 
 kmeans_hirschberg_larmore::~kmeans_hirschberg_larmore() {}
@@ -136,7 +139,7 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::basic(size_t n) {
     return std::make_pair(f[n], length);
 }
 
-double kmeans_hirschberg_larmore::get_actual_cost(size_t n, double *centers_ptr) {
+double kmeans_hirschberg_larmore::get_actual_cost(size_t n, std::unique_ptr<kmeans_result> &res) {
     double cost = 0.0;
     size_t m = n;
 
@@ -144,16 +147,16 @@ double kmeans_hirschberg_larmore::get_actual_cost(size_t n, double *centers_ptr)
     while (m != 0) {
         size_t prev = bestleft[m];
         cost += is.cost_interval_l2(prev, m-1);
-        double avg = is.query(prev, m-1) / (m - prev - 1);
+        double avg = is.query(prev, m) / (m - prev);
         centers.push_back(avg);
         m = prev;
+    }
 
+    res->centers.resize(centers.size());
+    for (size_t i = 0; i < centers.size(); ++i) {
+        res->centers[i] = centers[centers.size() - i - 1];
     }
-    if (centers_ptr) {
-        for (size_t i = 0; i < centers.size(); ++i) {
-            centers_ptr[i] = centers[centers.size() - i - 1];
-        }
-    }
+    res->cost = cost;
     return cost;
 }
 
@@ -191,9 +194,4 @@ static double kmeans_object_oriented(double *points_ptr, size_t n, double *cente
         for (size_t i = 0; i < k; ++i) centers_ptr[i] = kmeans_res->centers[i];
     }
     return kmeans_res->cost;
-}
-
-
-kmeans_fn get_kmeans_hirsch_larmore() {
-    return kmeans_object_oriented;
 }

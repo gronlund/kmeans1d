@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdint>
 #include <iostream>
+#include <cassert>
 
 template<typename T>
 interval_sum<T>::interval_sum(const std::vector<T> &points) : prefix_sum(points.size() + 1),
@@ -59,6 +60,15 @@ T interval_sum<T>::cost_interval_l2(size_t start, size_t i) const {
     T interval_cost = suffix_sq + mean*mean*length - 2 * suffix_sum * mean;
     //std::cout << "interval_cost = " << interval_cost << std::endl;
     return interval_cost;
+}
+
+/**
+ * Returns the mean of points[i..j], both included.
+ */
+template<typename T>
+T interval_sum<T>::mean(size_t i, size_t j) const {
+    assert(i <= j);
+    return this->query(i, j+1) / (j - i + 1);
 }
 
 template class interval_sum<double>;

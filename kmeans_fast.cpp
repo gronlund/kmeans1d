@@ -9,10 +9,11 @@
  */
 static double oo = DBL_MAX;
 
-kmeans_fast::kmeans_fast(const std::vector<double> &points) : is(points),
-                                                              row(points.size(), 0),
-                                                              row_prev(points.size(), 0),
-                                                              n(points.size()) { }
+kmeans_fast::kmeans_fast(const std::vector<double> &points) : kmeans_dp(points) { }
+
+std::unique_ptr<kmeans_dp> kmeans_fast::get_instance(std::vector<double> &points) {
+    return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
+}
 
 std::unique_ptr<kmeans_result> kmeans_fast::compute(size_t k) {
     std::unique_ptr<kmeans_result> res(new kmeans_result);

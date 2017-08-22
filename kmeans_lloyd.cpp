@@ -134,6 +134,7 @@ std::unique_ptr<kmeans_result> kmeans_lloyd_slow::compute(size_t k) {
     double cost = 0;
     for (size_t i = 0; i < k; ++i) {
         cost += is.cost_interval_l2(start, splits[i]);
+        res->centers.push_back(is.query(start, splits[i]) / (splits[i] - start + 1));
         start = splits[i]+1;
         if (i < k - 1)
             start = std::min(start, splits[i+1]);
@@ -142,6 +143,9 @@ std::unique_ptr<kmeans_result> kmeans_lloyd_slow::compute(size_t k) {
     return res;
 }
 
+std::unique_ptr<kmeans_result> kmeans_lloyd_slow::compute_and_report(size_t k) {
+    return compute(k);
+}
 
 kmeans_lloyd_fast::kmeans_lloyd_fast(const std::vector<double> &points) : points(points),
                                                                           is(points),
@@ -206,11 +210,16 @@ std::unique_ptr<kmeans_result> kmeans_lloyd_fast::compute(size_t k) {
     double cost = 0;
     for (size_t i = 0; i < k; ++i) {
         cost += is.cost_interval_l2(start, splits[i]);
+        res->centers.push_back(is.query(start, splits[i]) / (splits[i] - start + 1));
         start = splits[i]+1;
         if (i < k-1)
             start = std::min(start, splits[i+1]);
     }
     res->cost = cost;
     return res;
-
 }
+
+std::unique_ptr<kmeans_result> kmeans_lloyd_fast::compute_and_report(size_t k) {
+    return compute(k);
+}
+

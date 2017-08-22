@@ -2,6 +2,7 @@
 #include <iostream>
 #include <tuple>
 #include <typeinfo>
+#include <sstream>
 
 #include "kmeans.h"
 #include "common.h"
@@ -30,7 +31,7 @@ void correctness_test_random() {
     std::unique_ptr<kmeans> medi(new kmeans_medi(points));
     std::unique_ptr<kmeans> hirc(new kmeans_hirschberg_larmore(points));
 
-    printf("Running tests for fast, slow and medi algorithms.\n");
+    cout << "Running tests for fast, slow and medi algorithms." << endl;
     bool any_fail = false;
     for (size_t k = 1; k < 10; ++k) {
         double fast_res = get_cost(*fast, k);
@@ -125,6 +126,98 @@ void correctness_lloyd() {
     }
 }
 
+double get_cost(std::unique_ptr<kmeans_result> &res, std::vector<double> &points, size_t k) {
+    double computed_cost = 0;
+    for (auto point : points) {
+        double closest = res->centers[0];
+        for (auto center : res->centers) {
+            if (abs(point - center) < abs(point - closest)) closest = center;
+        }
+        computed_cost += (point-closest) * (point - closest);
+    }
+    return computed_cost;
+}
+
+bool check_clustering_size(std::unique_ptr<kmeans_result> &res, std::vector<double> &points, size_t k) {
+    if (res->centers.size() != k || res->centers.size() < 1) return false;
+    return true;
+}
+
+bool check_clustering_cost(std::unique_ptr<kmeans_result> &res, std::vector<double> &points, size_t k) {
+    double computed_cost = get_cost(res, points, k);
+    if (abs(computed_cost - res->cost) > 1e-6) return false;
+    return true;
+}
+
+void test_cluster_cost_equal_returned_cost() {
+    std::string prefix_template = "[test_cluster_cost_equal_returned_cost] ";
+    std::vector<double> points = {0.0041841036041334601, 0.016864905913439476,
+                                  0.091539430201843741, 0.11167850389725253,
+                                  0.11729255208759837, 0.15870772838060987,
+                                  0.21537383129510801, 0.22030075252311732,
+                                  0.29234574608234609, 0.34182095515978905,
+                                  0.38064794144662972, 0.42369328807073692,
+                                  0.42898263636024347, 0.46299304217492687,
+                                  0.59849854723755469, 0.77144917504818644,
+                                  0.78318033400636167, 0.8393332644552387,
+                                  0.92763049366511063, 0.98685245969033264};
+    std::unique_ptr<kmeans> fast(new kmeans_fast(points));
+    std::unique_ptr<kmeans> slow(new kmeans_slow(points));
+    std::unique_ptr<kmeans> medi(new kmeans_medi(points));
+    std::unique_ptr<kmeans> hirc(new kmeans_hirschberg_larmore(points));
+    bool fail = false;
+    for (size_t k = 1; k < 10; ++k) {
+        std::unique_ptr<kmeans_result> fast_res = fast->compute_and_report(k);
+        std::unique_ptr<kmeans_result> medi_res = medi->compute_and_report(k);
+        std::unique_ptr<kmeans_result> slow_res = slow->compute_and_report(k);
+        std::unique_ptr<kmeans_result> hirc_res = hirc->compute_and_report(k);
+        std::stringstream ss;
+        ss << prefix_template << "[ k = " << k << " ] ";
+        std::string prefix = ss.str();
+        if (!check_clustering_size(fast_res, points, k)) {
+            cout << prefix << "fast clustering expected size " << k
+                 << " found size " << fast_res->centers.size() << "." << endl;
+            fail = true;
+        } else if (!check_clustering_cost(fast_res, points, k)) {
+            cout << prefix << "fast clustering cost failed. Returned cost " << fast_res->cost
+                 << "  Computed cost " << get_cost(fast_res, points, k) << endl;
+            fail = true;
+        }
+        if (!check_clustering_size(medi_res, points, k)) {
+            cout << prefix << "medi clustering expected size " << k
+                 << " found size " << medi_res->centers.size() << "." << endl;
+            fail = true;
+        } else if (!check_clustering_cost(medi_res, points, k)) {
+            cout << prefix << "medi clustering cost failed. Returned cost " << medi_res->cost
+                 << "  Computed cost " << get_cost(medi_res, points, k) << endl;
+            fail = true;
+        }
+        if (!check_clustering_size(slow_res, points, k)) {
+            cout << prefix << "slow clustering expected size " << k
+                 << " found size " << slow_res->centers.size() << "." << endl;
+            fail = true;
+        } else if (!check_clustering_cost(slow_res, points, k)) {
+            cout << prefix << "slow clustering cost failed. Returned cost " << slow_res->cost
+                 << "  Computed cost " << get_cost(slow_res, points, k) << endl;
+            fail = true;
+        }
+        if (!check_clustering_size(hirc_res, points, k)) {
+            cout << prefix << "hirc clustering expected size " << k
+                 << " found size " << hirc_res->centers.size() << "." << endl;
+            fail = true;
+        } else if (!check_clustering_cost(hirc_res, points, k)) {
+            cout << prefix << "hirc clustering cost failed. Returned cost " << hirc_res->cost
+                 << "  Computed cost " << get_cost(hirc_res, points, k) << endl;
+            fail = true;
+        }
+    }
+    if (fail) {
+        cout << prefix_template << "Failed." << endl;
+    } else {
+        cout << prefix_template << "Succeeded." << endl;
+    }
+}
+
 void more_clusters_than_points() {
     // TODO: test it.
     std::vector<double> points = {1.0, 2.0, 3.0, 4.0};
@@ -157,6 +250,7 @@ int main(int argc, char *argv[]) {
         correctness_test_random();
         correctness_lloyd();
         more_clusters_than_points();
+        test_cluster_cost_equal_returned_cost();
         return 0;
     }
     if (argc == 1) {

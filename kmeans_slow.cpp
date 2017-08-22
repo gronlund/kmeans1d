@@ -2,12 +2,19 @@
 #include "float.h"
 #include "common.h"
 #include <memory>
+#include <vector>
+#include <algorithm>
+#include <iostream>
 /**
  * This code implements the dynamic programming algorithm
  * for computing k-means.
  */
 
-kmeans_slow::kmeans_slow(const std::vector<double> &points) : is(points), n(points.size()) {}
+kmeans_slow::kmeans_slow(const std::vector<double> &points) : kmeans_dp(points) {}
+
+std::unique_ptr<kmeans_dp> kmeans_slow::get_instance(std::vector<double> &points) {
+    return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
+}
 
 std::unique_ptr<kmeans_result> kmeans_slow::compute(size_t k) {
     std::unique_ptr<kmeans_result> res = std::unique_ptr<kmeans_result>(new kmeans_result);
