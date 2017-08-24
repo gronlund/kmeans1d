@@ -9,7 +9,7 @@
  */
 
 kmeans_slow::kmeans_slow(const std::vector<double> &points) : kmeans_dp(points) {}
-
+std::string kmeans_slow::name() { return std::string("slow"); }
 std::unique_ptr<kmeans_dp> kmeans_slow::get_instance(std::vector<double> &points) {
     return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
 }

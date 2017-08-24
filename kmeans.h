@@ -23,6 +23,7 @@ public:
     virtual ~kmeans() {};
     virtual std::unique_ptr<kmeans_result> compute(size_t k) = 0;
     virtual std::unique_ptr<kmeans_result> compute_and_report(size_t k) = 0;
+    virtual std::string name() = 0;
 };
 
 class kmeans_hirschberg_larmore : public kmeans {
@@ -31,6 +32,7 @@ public:
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_result> compute_and_report(size_t k) override;
     ~kmeans_hirschberg_larmore() override;
+    std::string name() override;
 private:
     double weight(size_t i, size_t j);
     double g(size_t i, size_t j);
@@ -43,6 +45,7 @@ private:
     std::vector<double> f;
     std::vector<std::size_t> bestleft;
     interval_sum<double> is;
+    std::vector<double> points;
     std::size_t n;
 };
 
@@ -69,6 +72,7 @@ public:
     kmeans_fast(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) override;
+    std::string name() override;
 private:
     double cimj(size_t i, size_t m, size_t j);
     void reduce(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
@@ -85,6 +89,7 @@ public:
     kmeans_medi(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) override;
+    std::string name() override;
 private:
 
     void fill_row_rec(size_t begin, size_t end, size_t k,
@@ -97,6 +102,7 @@ public:
     kmeans_slow(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) override;
+    std::string name() override;
 };
 
 class kmeans_lloyd : public kmeans {
@@ -107,6 +113,7 @@ public:
     virtual void set_seed(std::mt19937::result_type val);
     std::mt19937::result_type random_value();
     std::vector<size_t> init_splits(size_t n, size_t k);
+    virtual std::string name() override;
 private:
     std::mt19937_64 mt;
 };

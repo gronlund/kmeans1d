@@ -1,6 +1,7 @@
 #ifndef INTERVAL_SUM_GUARD
 #define INTERVAL_SUM_GUARD
 
+#include <cstdlib>
 #include <vector>
 
 template<typename T>

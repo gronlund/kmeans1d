@@ -1,5 +1,6 @@
 #include "kmeans.h"
 
+#include <iostream>
 #include <limits>
 #include <memory>
 /**
@@ -9,9 +10,10 @@
 
 
 kmeans_medi::kmeans_medi(const std::vector<double> &points) : kmeans_dp(points) { }
+std::string kmeans_medi::name() { return std::string("medi"); }
 
 std::unique_ptr<kmeans_dp> kmeans_medi::get_instance(std::vector<double> &points) {
-    return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
+    return std::unique_ptr<kmeans_dp>(new kmeans_medi(points));
 }
 
 void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
@@ -47,16 +49,16 @@ void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
 }
 
 void kmeans_medi::fill_row(size_t k) {
+    std::cout << "fill row " << k << std::endl;
     fill_row_rec(0, n, k, 0, n-1);
 }
 
 std::unique_ptr<kmeans_result> kmeans_medi::compute(size_t k) {
     std::unique_ptr<kmeans_result> res(new kmeans_result);
-    row = std::vector<double>(n, 0.0);
-    row_prev = std::vector<double>(n, 0.0);
     for (size_t i = 1; i < n; ++i) {
         row[i] = is.cost_interval_l2(0, i);
     }
+    row[0] = 0.0;
 
     for (size_t _k = 2; _k <= k; ++_k) {
         std::swap(row, row_prev);
@@ -64,21 +66,4 @@ std::unique_ptr<kmeans_result> kmeans_medi::compute(size_t k) {
     }
     res->cost = row[n-1];
     return res;
-}
-
-static double kmeans_object_oriented(double *points_ptr, size_t n,
-                                     double *centers_ptr, size_t k) {
-    std::vector<double> points(n, 0);
-    for (size_t i = 0; i < n; ++i) points[i] = points_ptr[i];
-    kmeans_hirschberg_larmore kmeans_hirsch(points);
-    std::unique_ptr<kmeans_result> kmeans_res = kmeans_hirsch.compute(k);
-    if (centers_ptr) {
-        for (size_t i = 0; i < k; ++i) centers_ptr[i] = kmeans_res->centers[i];
-    }
-    return kmeans_res->cost;
-}
-
-
-kmeans_fn get_kmeans_medi() {
-    return kmeans_object_oriented;
 }

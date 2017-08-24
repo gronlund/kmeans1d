@@ -9,8 +9,9 @@ static double oo = std::numeric_limits<double>::max();
 
 kmeans_fast::kmeans_fast(const std::vector<double> &points) : kmeans_dp(points) { }
 
+std::string kmeans_fast::name() { return std::string("fast"); }
 std::unique_ptr<kmeans_dp> kmeans_fast::get_instance(std::vector<double> &points) {
-    return std::unique_ptr<kmeans_dp>(new kmeans_slow(points));
+    return std::unique_ptr<kmeans_dp>(new kmeans_fast(points));
 }
 
 std::unique_ptr<kmeans_result> kmeans_fast::compute(size_t k) {

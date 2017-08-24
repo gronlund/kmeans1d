@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -23,12 +24,21 @@ static std::vector<size_t> bestleft;
 
 kmeans_hirschberg_larmore::kmeans_hirschberg_larmore(const std::vector<double> &points) :
     f(points.size() + 1, 0.0), bestleft(points.size() + 1, 0),
-    is(points), n(points.size()) { }
+    is(points), points(points), n(points.size()) { }
+
+std::string kmeans_hirschberg_larmore::name() { return std::string("hirc"); }
 
 std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
     if (k >= n) {
         kmeans_res->cost = 0.0;
+        kmeans_res->centers.resize(k);
+        for (size_t i = 0; i < n; ++i) {
+            kmeans_res->centers[i] = points[i];
+        }
+        for (size_t i = n; i < k; ++i) {
+            kmeans_res->centers[i] = points[n-1];
+        }
         return kmeans_res;
     }
     if (k == 1) {
@@ -38,28 +48,50 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     }
 
     double lo = 0.0;
-    double hi = 2 * is.cost_interval_l2(0, n-1);
+    double hi = is.cost_interval_l2(0, n-1);
+    double hi_intercept = hi;
+    double lo_intercept = 0;
+    size_t hi_k = 1;
+    size_t lo_k = n;
+    //double hi = 1e-2;
 
-    double val_found, best_val;
+    double val_found;
     size_t k_found;
-    while (hi - lo > 1e-10) {
-        double mid = lo + (hi-lo) / 2.0;
-        lambda = mid;
+    size_t cnt = 0;
+    while (true) {
+        ++cnt;
+        //double mid = lo + (hi-lo) / 2.0;
+        double t = (hi_intercept - lo_intercept) / sqrt(lo_k - hi_k);
+        //double intercept_guess = t * sqrt(lo_k - k);
+        double intercept_guess = (hi_intercept + lo_intercept) / 2;
+        double intersect_hi = (intercept_guess - hi_intercept) / (hi_k - k);
+        double intersect_lo = (intercept_guess - lo_intercept) / (lo_k - k);
+        assert(intercept_guess > 0);
+        assert(intercept_guess <= hi_intercept);
+        assert(intercept_guess >= lo_intercept);
+        //lambda = (intersect_hi + intersect_lo) / 2;
+        lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
+        std::cout << "call basic lambda=" << lambda << std::endl;
         std::tie(val_found, k_found) = this->basic(n);
         if (k_found > k) {
-            lo = mid;
+            lo_k = k_found;
+            lo = lambda;
+            lo_intercept = val_found - lo_k * lambda;
         } else if (k_found < k) {
-            hi = mid;
+            hi = lambda;
+            hi_k = k_found;
+            hi_intercept = val_found - hi_k * lambda;
         } else {
-            hi = mid;
+            hi = lambda;
             break;
         }
     }
-    lambda = hi;
-    std::tie(val_found, k_found) = this->basic(n);
+    std::cout << "iterations: " << cnt << std::endl;
+    //lambda = hi;
+    //std::tie(val_found, k_found) = this->basic(n);
     assert(k == k_found);
     //double cost = val_found - k_found * lambda; // this is imprecise
-    double cost = get_actual_cost(n, kmeans_res);
+    get_actual_cost(n, kmeans_res);
     return kmeans_res;
 }
 
@@ -89,10 +121,15 @@ bool kmeans_hirschberg_larmore::bridge(size_t i, size_t j, size_t k, size_t n) {
     size_t hi = n;
     while (hi - lo >= 2) {
         size_t mid = lo + (hi-lo)/2;
-        if (g(i, mid) <= g(j, mid)) {
+        double gim = g(i, mid);
+        double gjm = g(j, mid);
+        double gkm = g(k, mid);
+        if (gim <= gjm) {
             lo = mid;
+            if (gkm <= gjm) return true;
         } else {
             hi = mid;
+            if (gjm < gkm) return false;
         }
     }
     bool result = (g(k, hi) <= g(j, hi));
@@ -115,11 +152,13 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::basic(size_t n) {
         if (g(m, n) < g(D[D.size() - 1], n)) {
             D.push_back(m);
         } else { continue; }
+
         while (front + 2 < D.size() && bridge(D[D.size() - 3], D[D.size() - 2], m, n))  {
             std::swap(D[D.size() - 1], D[D.size() - 2]);
 
             D.pop_back();
         }
+
         if (front + 2 == D.size() && g(D[D.size() - 1], m+1) <= g(D[D.size() - 2], m+1)) {
             ++front;
         }
@@ -182,15 +221,4 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::traditional(size_t n) {
         ++length;
     }
     return std::make_pair(f[n-1], length);
-}
-
-static double kmeans_object_oriented(double *points_ptr, size_t n, double *centers_ptr, size_t k) {
-    std::vector<double> points(n, 0);
-    for (size_t i = 0; i < n; ++i) points[i] = points_ptr[i];
-    kmeans_hirschberg_larmore kmeans_hirsch(points);
-    std::unique_ptr<kmeans_result> kmeans_res = kmeans_hirsch.compute(k);
-    if (centers_ptr) {
-        for (size_t i = 0; i < k; ++i) centers_ptr[i] = kmeans_res->centers[i];
-    }
-    return kmeans_res->cost;
 }

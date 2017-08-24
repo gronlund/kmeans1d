@@ -9,7 +9,7 @@
 using namespace std;
 
 double get_cost(kmeans &km, size_t k) {
-    std::unique_ptr<kmeans_result> res(km.compute(k));
+    std::unique_ptr<kmeans_result> res(km.compute_and_report(k));
     return res->cost;
 }
 

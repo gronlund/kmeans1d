@@ -45,6 +45,7 @@ static void print_cost(std::vector<size_t> &splits, interval_sum<double> &is, st
 }
 
 kmeans_lloyd::kmeans_lloyd() : mt(std::time(nullptr)) { }
+std::string kmeans_lloyd::name() { return std::string("lloyd"); }
 
 void kmeans_lloyd::set_seed(std::mt19937::result_type val) {
     mt.seed(val);

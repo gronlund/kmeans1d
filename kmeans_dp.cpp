@@ -1,5 +1,6 @@
 #include "kmeans.h"
 #include <memory>
+#include <iostream>
 
 kmeans_dp::kmeans_dp(const std::vector<double> &points) : is(points), row(points.size()), row_prev(points.size()),
                                                           points(points.begin(), points.end()), n(points.size()) {}
@@ -12,6 +13,7 @@ double kmeans_dp::report(std::vector<double> &points, size_t k, std::vector<doub
     }
 
     std::vector<double> reversed_points(points.rbegin(), points.rend());
+    for (auto &p : reversed_points) p = -p;
 
     std::vector<double> last_row_left;
     std::vector<double> last_row_right;
@@ -48,6 +50,10 @@ double kmeans_dp::report(std::vector<double> &points, size_t k, std::vector<doub
     {
         std::vector<double> empty;
         std::swap(empty, last_row_right);
+    }
+    {
+        std::vector<double> empty;
+        std::swap(empty, reversed_points);
     }
     std::vector<double> points_left(points.begin(), points.begin() + best_idx + 1);
     std::vector<double> points_right(points.begin() + best_idx + 1, points.end());
