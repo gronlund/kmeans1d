@@ -49,7 +49,7 @@ void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
 }
 
 void kmeans_medi::fill_row(size_t k) {
-    std::cout << "fill row " << k << std::endl;
+    //std::cout << "fill row " << k << std::endl;
     fill_row_rec(0, n, k, 0, n-1);
 }
 

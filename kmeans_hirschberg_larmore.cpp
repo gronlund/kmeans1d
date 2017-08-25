@@ -55,8 +55,8 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     size_t lo_k = n;
     //double hi = 1e-2;
 
-    double val_found;
-    size_t k_found;
+    double val_found, val_found2;
+    size_t k_found, k_found2;
     size_t cnt = 0;
     while (true) {
         ++cnt;
@@ -71,8 +71,11 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
         assert(intercept_guess >= lo_intercept);
         //lambda = (intersect_hi + intersect_lo) / 2;
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
-        std::cout << "call basic lambda=" << lambda << std::endl;
-        std::tie(val_found, k_found) = this->basic(n);
+
+        std::tie(val_found, k_found) = this->with_smawk(n);
+        //std::tie(val_found, k_found) = this->basic(n);
+        //std::cout << "copy this " << val_found << std::endl;
+        //assert(val_found == val_found2);
         if (k_found > k) {
             lo_k = k_found;
             lo = lambda;
@@ -102,7 +105,8 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute_and_report(siz
 kmeans_hirschberg_larmore::~kmeans_hirschberg_larmore() {}
 
 double kmeans_hirschberg_larmore::weight(size_t i, size_t j) {
-    assert(i < j);
+    //assert(i < j);
+    if (i < j) return std::numeric_limits<double>::max();
     return is.cost_interval_l2(i, j-1) + lambda;
 }
 
@@ -137,6 +141,7 @@ bool kmeans_hirschberg_larmore::bridge(size_t i, size_t j, size_t k, size_t n) {
 }
 
 std::pair<double, size_t> kmeans_hirschberg_larmore::basic(size_t n) {
+    std::cout << "call basic lambda=" << lambda << std::endl;
     f.resize(n+1, 0);
     for (size_t i = 0; i <= n; ++i) f[i] = 0;
     bestleft.resize(n+1, 0);
@@ -222,3 +227,159 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::traditional(size_t n) {
     }
     return std::make_pair(f[n-1], length);
 }
+
+
+std::vector<size_t> kmeans_hirschberg_larmore::smawk_inner(std::vector<size_t> &columns, size_t e, std::vector<size_t> &rows) {
+    // base case.
+    if (rows.size() == 1) {
+        return std::vector<size_t>(rows.size(), 0);
+    }
+
+    //reduce
+    std::vector<size_t> new_rows;
+    std::vector<size_t> translate;
+    size_t n = columns.size();
+
+    for (size_t i = 0; i < rows.size(); ++i) {
+        // I1: forall j in [0..new_rows.size() - 2]: g(new_rows[j], columns[e*j]) < g(new_rows[j+1], columns[e*j]).
+        for (size_t j = 1; j < new_rows.size(); ++j) {
+            assert(g(new_rows[j-1], columns[e*(j-1)]) < g(new_rows[j], columns[e*(j-1)]));
+        }
+        // I2: every column minima is either already in a row in new_rows OR
+        //                         it is in rows[j] where j >= i.
+        auto r = rows[i];
+        while (new_rows.size() &&
+               g(r, columns[e * (new_rows.size() - 1)]) <= g(new_rows.back(), columns[e * (new_rows.size() - 1)])) {
+            new_rows.pop_back();
+            translate.pop_back();
+        }
+        if (e * new_rows.size() < n) { new_rows.push_back(r); translate.push_back(i); }
+    }
+    assert(new_rows.size() == (n + e - 1)/e); // new_row.size() = ceil(n/e)
+
+    //recurse
+    std::vector<size_t> column_minima_rec = smawk_inner(columns, 2*e, new_rows);
+    std::vector<size_t> column_minima;
+
+    //combine.
+    column_minima.push_back(column_minima_rec[0]);
+    for (size_t i = 1; i < column_minima_rec.size(); ++i) {
+        size_t from = translate[column_minima_rec[i-1]];
+        size_t to = translate[column_minima_rec[i]];
+        size_t new_column = (2 * i - 1);
+
+        assert(column_minima.size() == new_column);
+
+        column_minima.push_back(from);
+        for (size_t r = from; r <= to; ++r) {
+            if (g(rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+                column_minima[new_column] = r;
+            }
+        }
+        column_minima.push_back(to);
+    }
+    if (column_minima.size() < rows.size()) {
+        assert(column_minima.size() == rows.size() - 1);
+        size_t from = column_minima.back();
+        size_t new_column = rows.size() - 1;
+
+        column_minima.push_back(from);
+        for (size_t r = from; r < rows.size(); ++r) {
+            if (g(rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+                column_minima[new_column] = r;
+            }
+        }
+    }
+    assert(column_minima.size() == rows.size());
+    return column_minima;
+}
+
+std::vector<double> kmeans_hirschberg_larmore::smawk(size_t i0, size_t i1, size_t j0, size_t j1, std::vector<size_t> &idxes) {
+    std::vector<size_t> rows, cols;
+    for (size_t i = i0; i <= i1; ++i) {
+        rows.push_back(i);
+    }
+    for (size_t j = j0; j <= j1; ++j) {
+        cols.push_back(j);
+    }
+    std::cout << "hej" << std::endl;
+    std::vector<size_t> column_minima = smawk_inner(cols, 1, rows);
+    std::cout << "hej" << std::endl;
+    std::vector<double> res(column_minima.size());
+    for (size_t i = 0; i < res.size(); ++i) {
+        res[i] = g(rows[column_minima[i]], cols[i]);
+    }
+    std::cout << "hej igen" << std::endl;
+    return res;
+}
+/**
+ * @return f[j] = smallest value in column j0 <= j <= j1 of submatrix G[i0:i1,j0:j1] all inclusive.
+ */
+std::vector<double> kmeans_hirschberg_larmore::smawk_naive(size_t i0, size_t i1, size_t j0, size_t j1, std::vector<size_t> &idxes) {
+    std::vector<double> column_minima(j1 - j0 + 1, std::numeric_limits<double>::max());
+    idxes.resize(j1 - j0 + 1, n+10);
+    for (size_t j = j0; j<= j1; ++j) {
+        for (size_t i = i0; i <= i1; ++i) {
+            if (i >= j) continue; // g(i, j) is infinity.
+            double val = g(i, j);
+            if (val < column_minima[j-j0]) {
+                column_minima[j-j0] = val;
+                idxes[j-j0] = i;
+            }
+        }
+    }
+    return column_minima;
+}
+
+std::pair<double, size_t> kmeans_hirschberg_larmore::with_smawk(size_t n) {
+    std::cout << "call with_smawk lambda=" << lambda << std::endl;
+    f.resize(n+1, 0);
+    bestleft.resize(n+1, 0);
+    f[0] = 0;
+    size_t c = 0, r = 0;
+
+    while (c < n) {
+        // step 1
+        size_t p = std::min(2*c - r + 1, n);
+        // step 2
+        {
+            std::vector<size_t> bl;
+            std::vector<double> column_minima = smawk(r, c, c+1, p, bl);
+            for (size_t j = c+1; j <= p; ++j) {
+                f[j] = column_minima[j-(c+1)];
+                bestleft[j] = bl[j-(c+1)];
+            }
+        }
+        // step 3
+        if (c+1 <= p-1) {
+            std::vector<size_t> bl;
+            std::vector<double> H = smawk(c+1, p-1, c+2, p, bl);
+            // step 4
+            size_t j0 = p+1;
+            for (size_t j = p; j >= c+2; --j) {
+                if (H[j-(c+2)] < f[j]) j0 = j;
+            }
+            //step 5
+            if (j0 == p+1) {
+                c = p;
+            } else {
+                f[j0] = H[j0-(c+2)];
+                bestleft[j0] = bl[j0-(c+2)];
+                r = c + 1;
+                c = j0;
+            }
+        } else {
+            c = p;
+        }
+    }
+    // find length
+    size_t m = n;
+    size_t length = 0;
+    while (m > 0) {
+        m = bestleft[m];
+        ++length;
+    }
+    return std::make_pair(f[n], length);
+
+}
+

@@ -31,9 +31,14 @@ public:
     kmeans_hirschberg_larmore(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_result> compute_and_report(size_t k) override;
+    std::vector<double> smawk_naive(size_t i0, size_t i1, size_t j0, size_t j1, std::vector<size_t> &bl);
+    std::vector<double> smawk(size_t i0, size_t i1, size_t j0, size_t j1, std::vector<size_t> &bl);
+    std::pair<double, size_t> with_smawk(size_t n);
     ~kmeans_hirschberg_larmore() override;
     std::string name() override;
 private:
+    std::vector<size_t> smawk_inner(std::vector<size_t> &columns, size_t e,
+                                    std::vector<size_t> &rows);
     double weight(size_t i, size_t j);
     double g(size_t i, size_t j);
     bool bridge(size_t i, size_t j, size_t k, size_t n);
