@@ -239,58 +239,63 @@ std::vector<size_t> kmeans_hirschberg_larmore::smawk_inner(std::vector<size_t> &
     std::vector<size_t> new_rows;
     std::vector<size_t> translate;
     size_t n = columns.size();
-
-    for (size_t i = 0; i < rows.size(); ++i) {
-        // I1: forall j in [0..new_rows.size() - 2]: g(new_rows[j], columns[e*j]) < g(new_rows[j+1], columns[e*j]).
-        for (size_t j = 1; j < new_rows.size(); ++j) {
-            assert(g(new_rows[j-1], columns[e*(j-1)]) < g(new_rows[j], columns[e*(j-1)]));
+    if ((n + e - 1)/e < rows.size()) {
+        for (size_t i = 0; i < rows.size(); ++i) {
+            // I1: forall j in [0..new_rows.size() - 2]: g(new_rows[j], columns[e*j]) < g(new_rows[j+1], columns[e*j]).
+            for (size_t j = 1; j < new_rows.size(); ++j) {
+                assert(g(new_rows[j-1], columns[e*(j-1)]) < g(new_rows[j], columns[e*(j-1)]));
+            }
+            // I2: every column minima is either already in a row in new_rows OR
+            //                         it is in rows[j] where j >= i.
+            auto r = rows[i];
+            while (new_rows.size() &&
+                   g(r, columns[e * (new_rows.size() - 1)]) <= g(new_rows.back(), columns[e * (new_rows.size() - 1)])) {
+                new_rows.pop_back();
+                translate.pop_back();
+            }
+            if (e * new_rows.size() < n) { new_rows.push_back(r); translate.push_back(i); }
         }
-        // I2: every column minima is either already in a row in new_rows OR
-        //                         it is in rows[j] where j >= i.
-        auto r = rows[i];
-        while (new_rows.size() &&
-               g(r, columns[e * (new_rows.size() - 1)]) <= g(new_rows.back(), columns[e * (new_rows.size() - 1)])) {
-            new_rows.pop_back();
-            translate.pop_back();
-        }
-        if (e * new_rows.size() < n) { new_rows.push_back(r); translate.push_back(i); }
+    } else {
+        new_rows = rows;
+        for (size_t i = 0; i < rows.size(); ++i) translate.push_back(i);
     }
     assert(new_rows.size() == (n + e - 1)/e); // new_row.size() = ceil(n/e)
 
     //recurse
-    std::vector<size_t> column_minima_rec = smawk_inner(columns, 2*e, new_rows);
-    std::vector<size_t> column_minima;
+    std::vector<size_t> column_minima_rec = smawk_inner(columns, 2*e, new_rows);  // indexes in new_rows
+    assert(column_minima_rec.size() == (new_rows.size() + 1)/2);
+    std::vector<size_t> column_minima; // indexes in rows
 
     //combine.
-    column_minima.push_back(column_minima_rec[0]);
+    column_minima.push_back(translate[column_minima_rec[0]]);
     for (size_t i = 1; i < column_minima_rec.size(); ++i) {
-        size_t from = translate[column_minima_rec[i-1]];
-        size_t to = translate[column_minima_rec[i]];
+        size_t from = column_minima_rec[i-1];  // index in new_rows
+        size_t to = column_minima_rec[i]; // index in new_rows
         size_t new_column = (2 * i - 1);
 
         assert(column_minima.size() == new_column);
 
         column_minima.push_back(from);
         for (size_t r = from; r <= to; ++r) {
-            if (g(rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
-                column_minima[new_column] = r;
+            if (g(new_rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+                column_minima[new_column] = translate[r];
             }
         }
-        column_minima.push_back(to);
+        column_minima.push_back(translate[to]);
     }
-    if (column_minima.size() < rows.size()) {
-        assert(column_minima.size() == rows.size() - 1);
-        size_t from = column_minima.back();
-        size_t new_column = rows.size() - 1;
+    if (column_minima.size() < new_rows.size()) {
+        assert(column_minima.size() == new_rows.size() - 1);
+        size_t from = column_minima_rec.back();
+        size_t new_column = new_rows.size() - 1;
 
-        column_minima.push_back(from);
-        for (size_t r = from; r < rows.size(); ++r) {
-            if (g(rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
-                column_minima[new_column] = r;
+        column_minima.push_back(translate[from]);
+        for (size_t r = from; r < new_rows.size(); ++r) {
+            if (g(new_rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+                column_minima[new_column] = translate[r];
             }
         }
     }
-    assert(column_minima.size() == rows.size());
+    assert(column_minima.size() == new_rows.size());
     return column_minima;
 }
 
@@ -302,14 +307,14 @@ std::vector<double> kmeans_hirschberg_larmore::smawk(size_t i0, size_t i1, size_
     for (size_t j = j0; j <= j1; ++j) {
         cols.push_back(j);
     }
-    std::cout << "hej" << std::endl;
     std::vector<size_t> column_minima = smawk_inner(cols, 1, rows);
-    std::cout << "hej" << std::endl;
     std::vector<double> res(column_minima.size());
     for (size_t i = 0; i < res.size(); ++i) {
         res[i] = g(rows[column_minima[i]], cols[i]);
     }
-    std::cout << "hej igen" << std::endl;
+    for (size_t i = 0; i < column_minima.size(); ++i) {
+        idxes.push_back(rows[column_minima[i]]);
+    }
     return res;
 }
 /**

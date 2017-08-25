@@ -4,11 +4,11 @@ OBJS := kmeans_dp.o kmeans_slow.o kmeans_fast.o kmeans_medi.o \
 CXXFLAGS_RELEASE := -Wall -Wextra -fPIE -O2
 CXXFLAGS_DEBUG := -g -Wall -Wextra -fPIE -fsanitize=undefined -DDEBUG #-fsanitize=address
 T ?= RELEASE
-CXXFLAGS := $(CXXFLAGS_$T) -std=c++11
+CXXFLAGS = $(CXXFLAGS_$T) -std=c++11
 EXEC := run
 TIME := timing
 CXX = g++
-TEST := test-$T
+TEST = test-$T
 
 all: $(EXEC)
 
@@ -31,3 +31,5 @@ $(TIME) : $(OBJS) timing.cpp
 
 %.o: %.c
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+.PHONY : all test clean
