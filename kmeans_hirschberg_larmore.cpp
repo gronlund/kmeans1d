@@ -60,22 +60,16 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
     size_t cnt = 0;
     while (true) {
         ++cnt;
-        //double mid = lo + (hi-lo) / 2.0;
         double t = (hi_intercept - lo_intercept) / sqrt(lo_k - hi_k);
-        //double intercept_guess = t * sqrt(lo_k - k);
         double intercept_guess = (hi_intercept + lo_intercept) / 2;
         double intersect_hi = (intercept_guess - hi_intercept) / (hi_k - k);
         double intersect_lo = (intercept_guess - lo_intercept) / (lo_k - k);
         assert(intercept_guess > 0);
         assert(intercept_guess <= hi_intercept);
         assert(intercept_guess >= lo_intercept);
-        //lambda = (intersect_hi + intersect_lo) / 2;
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
 
         std::tie(val_found, k_found) = this->with_smawk(n);
-        //std::tie(val_found, k_found) = this->basic(n);
-        //std::cout << "copy this " << val_found << std::endl;
-        //assert(val_found == val_found2);
         if (k_found > k) {
             lo_k = k_found;
             lo = lambda;
@@ -89,11 +83,7 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute(size_t k) {
             break;
         }
     }
-    std::cout << "iterations: " << cnt << std::endl;
-    //lambda = hi;
-    //std::tie(val_found, k_found) = this->basic(n);
     assert(k == k_found);
-    //double cost = val_found - k_found * lambda; // this is imprecise
     get_actual_cost(n, kmeans_res);
     return kmeans_res;
 }
@@ -105,8 +95,7 @@ std::unique_ptr<kmeans_result> kmeans_hirschberg_larmore::compute_and_report(siz
 kmeans_hirschberg_larmore::~kmeans_hirschberg_larmore() {}
 
 double kmeans_hirschberg_larmore::weight(size_t i, size_t j) {
-    //assert(i < j);
-    if (i < j) return std::numeric_limits<double>::max();
+    if (i >= j) return std::numeric_limits<double>::max();
     return is.cost_interval_l2(i, j-1) + lambda;
 }
 
@@ -228,26 +217,28 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::traditional(size_t n) {
     return std::make_pair(f[n-1], length);
 }
 
-
 std::vector<size_t> kmeans_hirschberg_larmore::smawk_inner(std::vector<size_t> &columns, size_t e, std::vector<size_t> &rows) {
     // base case.
+    size_t n = columns.size();
+    size_t result_size = (n + e - 1) / e;
     if (rows.size() == 1) {
-        return std::vector<size_t>(rows.size(), 0);
+        // result is of length (n + e - 1)/e
+        return std::vector<size_t>(result_size, 0);
     }
 
     //reduce
     std::vector<size_t> new_rows;
     std::vector<size_t> translate;
-    size_t n = columns.size();
-    if ((n + e - 1)/e < rows.size()) {
+    if (result_size < rows.size()) {
         for (size_t i = 0; i < rows.size(); ++i) {
             // I1: forall j in [0..new_rows.size() - 2]: g(new_rows[j], columns[e*j]) < g(new_rows[j+1], columns[e*j]).
-            for (size_t j = 1; j < new_rows.size(); ++j) {
-                assert(g(new_rows[j-1], columns[e*(j-1)]) < g(new_rows[j], columns[e*(j-1)]));
-            }
+            // for (size_t j = 1; j < new_rows.size(); ++j) {
+            //     assert(g(new_rows[j-1], columns[e*(j-1)]) < g(new_rows[j], columns[e*(j-1)]));
+            // }
             // I2: every column minima is either already in a row in new_rows OR
             //                         it is in rows[j] where j >= i.
             auto r = rows[i];
+            //&& (new_rows.size() - 1 + (rows.size() - i)) >= result_size
             while (new_rows.size() &&
                    g(r, columns[e * (new_rows.size() - 1)]) <= g(new_rows.back(), columns[e * (new_rows.size() - 1)])) {
                 new_rows.pop_back();
@@ -259,11 +250,14 @@ std::vector<size_t> kmeans_hirschberg_larmore::smawk_inner(std::vector<size_t> &
         new_rows = rows;
         for (size_t i = 0; i < rows.size(); ++i) translate.push_back(i);
     }
-    assert(new_rows.size() == (n + e - 1)/e); // new_row.size() = ceil(n/e)
-
+    // assert(new_rows.size() <= result_size); // new_row.size() = ceil(n/e)
+    // assert(new_rows.size());
+    if (result_size == 1) {
+        return std::vector<size_t>{translate[0]};
+    }
     //recurse
     std::vector<size_t> column_minima_rec = smawk_inner(columns, 2*e, new_rows);  // indexes in new_rows
-    assert(column_minima_rec.size() == (new_rows.size() + 1)/2);
+    // assert(column_minima_rec.size() == ((result_size + 1)/ 2));
     std::vector<size_t> column_minima; // indexes in rows
 
     //combine.
@@ -271,31 +265,32 @@ std::vector<size_t> kmeans_hirschberg_larmore::smawk_inner(std::vector<size_t> &
     for (size_t i = 1; i < column_minima_rec.size(); ++i) {
         size_t from = column_minima_rec[i-1];  // index in new_rows
         size_t to = column_minima_rec[i]; // index in new_rows
-        size_t new_column = (2 * i - 1);
+        size_t new_column = (2 * i - 1); // 1, 3, 5..
 
-        assert(column_minima.size() == new_column);
+        // assert(column_minima.size() == new_column);
 
         column_minima.push_back(from);
         for (size_t r = from; r <= to; ++r) {
-            if (g(new_rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+            if (g(new_rows[r], columns[new_column*e]) <= g(rows[column_minima[new_column]], columns[new_column*e])) {
                 column_minima[new_column] = translate[r];
             }
         }
         column_minima.push_back(translate[to]);
     }
-    if (column_minima.size() < new_rows.size()) {
-        assert(column_minima.size() == new_rows.size() - 1);
+    // assert(column_minima.size() == result_size || column_minima.size() == result_size - 1);
+    if (column_minima.size() < result_size) {
+        // assert(column_minima.size() == result_size - 1);
         size_t from = column_minima_rec.back();
-        size_t new_column = new_rows.size() - 1;
+        size_t new_column = column_minima.size();
 
         column_minima.push_back(translate[from]);
         for (size_t r = from; r < new_rows.size(); ++r) {
-            if (g(new_rows[r], new_column*e) <= g(rows[column_minima[new_column]], new_column*e)) {
+            if (g(new_rows[r], columns[new_column*e]) <= g(rows[column_minima[new_column]], columns[new_column*e])) {
                 column_minima[new_column] = translate[r];
             }
         }
     }
-    assert(column_minima.size() == new_rows.size());
+    // assert(column_minima.size() == result_size);
     return column_minima;
 }
 
@@ -307,13 +302,12 @@ std::vector<double> kmeans_hirschberg_larmore::smawk(size_t i0, size_t i1, size_
     for (size_t j = j0; j <= j1; ++j) {
         cols.push_back(j);
     }
-    std::vector<size_t> column_minima = smawk_inner(cols, 1, rows);
+    std::vector<size_t> column_minima = smawk_inner(cols, 1, rows); // indexes in rows.
     std::vector<double> res(column_minima.size());
     for (size_t i = 0; i < res.size(); ++i) {
         res[i] = g(rows[column_minima[i]], cols[i]);
-    }
-    for (size_t i = 0; i < column_minima.size(); ++i) {
         idxes.push_back(rows[column_minima[i]]);
+        assert(res[i] != std::numeric_limits<double>::max());
     }
     return res;
 }
@@ -344,6 +338,7 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::with_smawk(size_t n) {
     size_t c = 0, r = 0;
 
     while (c < n) {
+        //std::cout << "hello" << std::endl;
         // step 1
         size_t p = std::min(2*c - r + 1, n);
         // step 2
