@@ -9,14 +9,14 @@
  */
 
 
-kmeans_medi::kmeans_medi(const std::vector<double> &points) : kmeans_dp(points) { }
-std::string kmeans_medi::name() { return std::string("medi"); }
+kmeans_monotone::kmeans_monotone(const std::vector<double> &points) : kmeans_dp(points) { }
+std::string kmeans_monotone::name() { return std::string("monotone"); }
 
-std::unique_ptr<kmeans_dp> kmeans_medi::get_instance(std::vector<double> &points) {
-    return std::unique_ptr<kmeans_dp>(new kmeans_medi(points));
+std::unique_ptr<kmeans_dp> kmeans_monotone::get_instance(std::vector<double> &points) {
+    return std::unique_ptr<kmeans_dp>(new kmeans_monotone(points));
 }
 
-void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
+void kmeans_monotone::fill_row_rec(size_t begin, size_t end, size_t k,
                                int64_t split_left, int64_t split_right) {
 
     size_t mid = (begin+end)/2;
@@ -48,12 +48,12 @@ void kmeans_medi::fill_row_rec(size_t begin, size_t end, size_t k,
     }
 }
 
-void kmeans_medi::fill_row(size_t k) {
+void kmeans_monotone::fill_row(size_t k) {
     //std::cout << "fill row " << k << std::endl;
     fill_row_rec(0, n, k, 0, n-1);
 }
 
-std::unique_ptr<kmeans_result> kmeans_medi::compute(size_t k) {
+std::unique_ptr<kmeans_result> kmeans_monotone::compute(size_t k) {
     std::unique_ptr<kmeans_result> res(new kmeans_result);
     for (size_t i = 1; i < n; ++i) {
         row[i] = is.cost_interval_l2(0, i);

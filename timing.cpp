@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     vector<size_t> ks = {10, 20};
     {
         ofstream f(datafile_name, ios_base::out);
-        f << "n,k,linear,medi,linear_report,medi_report,lloyd_report,wilber" << std::endl;
+        f << "n,k,dp-linear,dp-monotone,dp-linear-hirsch,dp-monotone-hirsch,lloyd_report,wilber" << std::endl;
     }
     omp_init_lock(&lock);
     for (size_t n = start; ; n += increment) {
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 
         for (size_t i = 0; i < ks.size(); ++i) {
             size_t k = ks[i];
-            std::chrono::milliseconds linear_time, medi_time, linear_time_report, medi_time_report;
+            std::chrono::milliseconds linear_time, monotone_time, linear_time_report, monotone_time_report;
             std::chrono::milliseconds lloyd_time_report, wilber_time;
 
 #pragma omp parallel for
@@ -87,13 +87,13 @@ int main(int argc, char *argv[]) {
                     linear_time = time_compute<kmeans_linear>(points, k);
                     break;
                 case 1:
-                    medi_time = time_compute<kmeans_medi>(points, k);
+                    monotone_time = time_compute<kmeans_monotone>(points, k);
                     break;
                 case 2:
                     linear_time_report = time_compute_and_report<kmeans_linear>(points, k);
                     break;
                 case 3:
-                    medi_time_report = time_compute_and_report<kmeans_medi>(points, k);
+                    monotone_time_report = time_compute_and_report<kmeans_monotone>(points, k);
                     break;
                 case 4:
                     lloyd_time_report = time_compute_and_report<kmeans_lloyd_fast>(points, k);
@@ -108,9 +108,9 @@ int main(int argc, char *argv[]) {
                 ofstream f(datafile_name, ios_base::app);
                 f << n << "," << k << ","
                   << linear_time.count() << ","
-                  << medi_time.count() << ","
+                  << monotone_time.count() << ","
                   << linear_time_report.count() << ","
-                  << medi_time_report.count() << ","
+                  << monotone_time_report.count() << ","
                   << lloyd_time_report.count() << ","
                   << wilber_time.count() << endl;
             }

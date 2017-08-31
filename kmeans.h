@@ -113,9 +113,9 @@ private:
     void base_case(size_t k);
 };
 
-class kmeans_medi : public kmeans_dp {
+class kmeans_monotone : public kmeans_dp {
 public:
-    kmeans_medi(const std::vector<double> &points);
+    kmeans_monotone(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) override;
     std::string name() override;

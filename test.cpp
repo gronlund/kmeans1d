@@ -27,15 +27,15 @@ void correctness_test_random() {
 
     std::unique_ptr<kmeans> linear(new kmeans_linear(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
-    std::unique_ptr<kmeans> medi(new kmeans_medi(points));
+    std::unique_ptr<kmeans> monotone(new kmeans_monotone(points));
     std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
 
-    cout << "Running tests for linear, slow and medi algorithms." << endl;
+    cout << "Running tests for linear, slow and monotone algorithms." << endl;
     bool any_fail = false;
     for (size_t k = 1; k < 10; ++k) {
         double linear_res = get_cost(*linear, k);
         double slow_res = get_cost(*slow, k);
-        double medi_res = get_cost(*medi, k);
+        double monotone_res = get_cost(*monotone, k);
         double wilber_res = get_cost(*wilber, k);
         bool fail = false;
         if (linear_res != slow_res) {
@@ -44,11 +44,11 @@ void correctness_test_random() {
         } else {
             cout << "[k = " << k << "] Test succeeded for slow" << endl;
         }
-        if (slow_res != medi_res) {
-            cout << "[k = " << k << "] Test failed for medi" << endl;
+        if (slow_res != monotone_res) {
+            cout << "[k = " << k << "] Test failed for monotone" << endl;
             fail = true;
         } else {
-            cout << "[k = " << k << "] Test succeeded for medi" << endl;
+            cout << "[k = " << k << "] Test succeeded for monotone" << endl;
         }
         if (slow_res != wilber_res) {
             cout << "[k = " << k << "] Test failed for wilber" << endl;
@@ -59,7 +59,7 @@ void correctness_test_random() {
         if (fail) {
             any_fail = true;
             double diff_linear_slow = abs(linear_res - slow_res);
-            double diff_medi_slow = abs(medi_res - slow_res);
+            double diff_monotone_slow = abs(monotone_res - slow_res);
             double diff_wilber_slow = abs(wilber_res - slow_res);
 
             cout << "[k = " << k << "] Failed" << endl;
@@ -68,7 +68,7 @@ void correctness_test_random() {
             cout << "|linear - slow| = " << setprecision(10) << diff_linear_slow << endl;
 
             cout << "[k = " << k << "] ";
-            cout << "|medi - slow| = " << setprecision(10) << diff_medi_slow << endl;
+            cout << "|monotone - slow| = " << setprecision(10) << diff_monotone_slow << endl;
 
             cout << "[k = " << k << "] ";
             cout << "|wilber - slow| = " << setprecision(10) << diff_wilber_slow << endl;
@@ -162,12 +162,12 @@ void test_cluster_cost_equal_returned_cost() {
                                   0.92763049366511063, 0.98685245969033264};
     std::unique_ptr<kmeans> linear(new kmeans_linear(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
-    std::unique_ptr<kmeans> medi(new kmeans_medi(points));
+    std::unique_ptr<kmeans> monotone(new kmeans_monotone(points));
     std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
     bool fail = false;
     for (size_t k = 1; k < 10; ++k) {
         std::unique_ptr<kmeans_result> linear_res = linear->compute_and_report(k);
-        std::unique_ptr<kmeans_result> medi_res = medi->compute_and_report(k);
+        std::unique_ptr<kmeans_result> monotone_res = monotone->compute_and_report(k);
         std::unique_ptr<kmeans_result> slow_res = slow->compute_and_report(k);
         std::unique_ptr<kmeans_result> wilber_res = wilber->compute_and_report(k);
         std::stringstream ss;
@@ -182,13 +182,13 @@ void test_cluster_cost_equal_returned_cost() {
                  << "  Computed cost " << get_cost(linear_res, points, k) << endl;
             fail = true;
         }
-        if (!check_clustering_size(medi_res, points, k)) {
-            cout << prefix << "medi clustering expected size " << k
-                 << " found size " << medi_res->centers.size() << "." << endl;
+        if (!check_clustering_size(monotone_res, points, k)) {
+            cout << prefix << "monotone clustering expected size " << k
+                 << " found size " << monotone_res->centers.size() << "." << endl;
             fail = true;
-        } else if (!check_clustering_cost(medi_res, points, k)) {
-            cout << prefix << "medi clustering cost failed. Returned cost " << medi_res->cost
-                 << "  Computed cost " << get_cost(medi_res, points, k) << endl;
+        } else if (!check_clustering_cost(monotone_res, points, k)) {
+            cout << prefix << "monotone clustering cost failed. Returned cost " << monotone_res->cost
+                 << "  Computed cost " << get_cost(monotone_res, points, k) << endl;
             fail = true;
         }
         if (!check_clustering_size(slow_res, points, k)) {
@@ -224,7 +224,7 @@ void more_clusters_than_points() {
     std::vector<std::shared_ptr<kmeans> > algs = {
         std::shared_ptr<kmeans>(new kmeans_linear(points)),
         std::shared_ptr<kmeans>(new kmeans_slow(points)),
-        std::shared_ptr<kmeans>(new kmeans_medi(points)),
+        std::shared_ptr<kmeans>(new kmeans_monotone(points)),
         std::shared_ptr<kmeans>(new kmeans_wilber(points)),
         std::shared_ptr<kmeans>(new kmeans_lloyd_slow(points)),
         std::shared_ptr<kmeans>(new kmeans_lloyd_fast(points))
