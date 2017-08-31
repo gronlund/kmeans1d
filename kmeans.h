@@ -97,9 +97,9 @@ protected:
     //virtual std::unique_ptr<kmeans_dp> get_new_instance(std::vector<double> &points) = 0;
 };
 
-class kmeans_fast : public kmeans_dp {
+class kmeans_linear : public kmeans_dp {
 public:
-    kmeans_fast(const std::vector<double> &points);
+    kmeans_linear(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) override;
     std::string name() override;
@@ -111,7 +111,6 @@ private:
                     size_t reduce_i, std::vector<size_t> &cols_output);
     void fill_row(size_t k);
     void base_case(size_t k);
-
 };
 
 class kmeans_medi : public kmeans_dp {

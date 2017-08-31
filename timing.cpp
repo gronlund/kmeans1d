@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     vector<size_t> ks = {10, 20};
     {
         ofstream f(datafile_name, ios_base::out);
-        f << "n,k,fast,medi,fast_report,medi_report,lloyd_report,wilber" << std::endl;
+        f << "n,k,linear,medi,linear_report,medi_report,lloyd_report,wilber" << std::endl;
     }
     omp_init_lock(&lock);
     for (size_t n = start; ; n += increment) {
@@ -77,20 +77,20 @@ int main(int argc, char *argv[]) {
 
         for (size_t i = 0; i < ks.size(); ++i) {
             size_t k = ks[i];
-            std::chrono::milliseconds fast_time, medi_time, fast_time_report, medi_time_report;
+            std::chrono::milliseconds linear_time, medi_time, linear_time_report, medi_time_report;
             std::chrono::milliseconds lloyd_time_report, wilber_time;
 
 #pragma omp parallel for
             for (size_t alg = 0; alg < 6; ++alg) {
                 switch (alg) {
                 case 0:
-                    fast_time = time_compute<kmeans_fast>(points, k);
+                    linear_time = time_compute<kmeans_linear>(points, k);
                     break;
                 case 1:
                     medi_time = time_compute<kmeans_medi>(points, k);
                     break;
                 case 2:
-                    fast_time_report = time_compute_and_report<kmeans_fast>(points, k);
+                    linear_time_report = time_compute_and_report<kmeans_linear>(points, k);
                     break;
                 case 3:
                     medi_time_report = time_compute_and_report<kmeans_medi>(points, k);
@@ -107,9 +107,9 @@ int main(int argc, char *argv[]) {
             {
                 ofstream f(datafile_name, ios_base::app);
                 f << n << "," << k << ","
-                  << fast_time.count() << ","
+                  << linear_time.count() << ","
                   << medi_time.count() << ","
-                  << fast_time_report.count() << ","
+                  << linear_time_report.count() << ","
                   << medi_time_report.count() << ","
                   << lloyd_time_report.count() << ","
                   << wilber_time.count() << endl;

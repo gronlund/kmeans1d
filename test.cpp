@@ -25,21 +25,21 @@ void correctness_test_random() {
                                   0.78318033400636167, 0.8393332644552387,
                                   0.92763049366511063, 0.98685245969033264};
 
-    std::unique_ptr<kmeans> fast(new kmeans_fast(points));
+    std::unique_ptr<kmeans> linear(new kmeans_linear(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
     std::unique_ptr<kmeans> medi(new kmeans_medi(points));
     std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
 
-    cout << "Running tests for fast, slow and medi algorithms." << endl;
+    cout << "Running tests for linear, slow and medi algorithms." << endl;
     bool any_fail = false;
     for (size_t k = 1; k < 10; ++k) {
-        double fast_res = get_cost(*fast, k);
+        double linear_res = get_cost(*linear, k);
         double slow_res = get_cost(*slow, k);
         double medi_res = get_cost(*medi, k);
         double wilber_res = get_cost(*wilber, k);
         bool fail = false;
-        if (fast_res != slow_res) {
-            cout << "[k = " << k << "] Test failed for fast" << endl;
+        if (linear_res != slow_res) {
+            cout << "[k = " << k << "] Test failed for linear" << endl;
             fail = true;
         } else {
             cout << "[k = " << k << "] Test succeeded for slow" << endl;
@@ -58,14 +58,14 @@ void correctness_test_random() {
         }
         if (fail) {
             any_fail = true;
-            double diff_fast_slow = abs(fast_res - slow_res);
+            double diff_linear_slow = abs(linear_res - slow_res);
             double diff_medi_slow = abs(medi_res - slow_res);
             double diff_wilber_slow = abs(wilber_res - slow_res);
 
             cout << "[k = " << k << "] Failed" << endl;
             cout << "Additional info below:" << endl;
             cout << "[k = " << k << "] ";
-            cout << "|fast - slow| = " << setprecision(10) << diff_fast_slow << endl;
+            cout << "|linear - slow| = " << setprecision(10) << diff_linear_slow << endl;
 
             cout << "[k = " << k << "] ";
             cout << "|medi - slow| = " << setprecision(10) << diff_medi_slow << endl;
@@ -160,26 +160,26 @@ void test_cluster_cost_equal_returned_cost() {
                                   0.59849854723755469, 0.77144917504818644,
                                   0.78318033400636167, 0.8393332644552387,
                                   0.92763049366511063, 0.98685245969033264};
-    std::unique_ptr<kmeans> fast(new kmeans_fast(points));
+    std::unique_ptr<kmeans> linear(new kmeans_linear(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
     std::unique_ptr<kmeans> medi(new kmeans_medi(points));
     std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
     bool fail = false;
     for (size_t k = 1; k < 10; ++k) {
-        std::unique_ptr<kmeans_result> fast_res = fast->compute_and_report(k);
+        std::unique_ptr<kmeans_result> linear_res = linear->compute_and_report(k);
         std::unique_ptr<kmeans_result> medi_res = medi->compute_and_report(k);
         std::unique_ptr<kmeans_result> slow_res = slow->compute_and_report(k);
         std::unique_ptr<kmeans_result> wilber_res = wilber->compute_and_report(k);
         std::stringstream ss;
         ss << prefix_template << "[ k = " << k << " ] ";
         std::string prefix = ss.str();
-        if (!check_clustering_size(fast_res, points, k)) {
-            cout << prefix << "fast clustering expected size " << k
-                 << " found size " << fast_res->centers.size() << "." << endl;
+        if (!check_clustering_size(linear_res, points, k)) {
+            cout << prefix << "linear clustering expected size " << k
+                 << " found size " << linear_res->centers.size() << "." << endl;
             fail = true;
-        } else if (!check_clustering_cost(fast_res, points, k)) {
-            cout << prefix << "fast clustering cost failed. Returned cost " << fast_res->cost
-                 << "  Computed cost " << get_cost(fast_res, points, k) << endl;
+        } else if (!check_clustering_cost(linear_res, points, k)) {
+            cout << prefix << "linear clustering cost failed. Returned cost " << linear_res->cost
+                 << "  Computed cost " << get_cost(linear_res, points, k) << endl;
             fail = true;
         }
         if (!check_clustering_size(medi_res, points, k)) {
@@ -222,7 +222,7 @@ void more_clusters_than_points() {
     std::vector<double> points = {1.0, 2.0, 3.0, 4.0};
     size_t k = 10;
     std::vector<std::shared_ptr<kmeans> > algs = {
-        std::shared_ptr<kmeans>(new kmeans_fast(points)),
+        std::shared_ptr<kmeans>(new kmeans_linear(points)),
         std::shared_ptr<kmeans>(new kmeans_slow(points)),
         std::shared_ptr<kmeans>(new kmeans_medi(points)),
         std::shared_ptr<kmeans>(new kmeans_wilber(points)),

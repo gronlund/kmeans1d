@@ -1,4 +1,4 @@
-OBJS := kmeans_dp.o kmeans_slow.o kmeans_fast.o kmeans_medi.o \
+OBJS := kmeans_dp.o kmeans_slow.o kmeans_linear.o kmeans_medi.o \
 	kmeans_lloyd.o kmeans_hirschberg_larmore.o kmeans_wilber.o \
 	interval_sum.o
 CXXFLAGS_RELEASE := -Wall -Wextra -fPIE -O2

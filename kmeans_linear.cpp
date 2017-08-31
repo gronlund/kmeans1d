@@ -7,14 +7,14 @@
  */
 static double oo = std::numeric_limits<double>::max();
 
-kmeans_fast::kmeans_fast(const std::vector<double> &points) : kmeans_dp(points) { }
+kmeans_linear::kmeans_linear(const std::vector<double> &points) : kmeans_dp(points) { }
 
-std::string kmeans_fast::name() { return std::string("fast"); }
-std::unique_ptr<kmeans_dp> kmeans_fast::get_instance(std::vector<double> &points) {
-    return std::unique_ptr<kmeans_dp>(new kmeans_fast(points));
+std::string kmeans_linear::name() { return std::string("linear"); }
+std::unique_ptr<kmeans_dp> kmeans_linear::get_instance(std::vector<double> &points) {
+    return std::unique_ptr<kmeans_dp>(new kmeans_linear(points));
 }
 
-std::unique_ptr<kmeans_result> kmeans_fast::compute(size_t k) {
+std::unique_ptr<kmeans_result> kmeans_linear::compute(size_t k) {
     std::unique_ptr<kmeans_result> res(new kmeans_result);
     res->cost = 0.0;
 
@@ -33,7 +33,7 @@ std::unique_ptr<kmeans_result> kmeans_fast::compute(size_t k) {
  * @param j is the first point of the last cluster.
  * @return C_i[m][j] in the the 1D kmeans paper.
  */
-double kmeans_fast::cimj(size_t i, size_t m, size_t j) {
+double kmeans_linear::cimj(size_t i, size_t m, size_t j) {
     assert(i > 0);
     if (m < j) {
         return row_prev[m];
@@ -47,7 +47,7 @@ double kmeans_fast::cimj(size_t i, size_t m, size_t j) {
     }
 }
 
-void kmeans_fast::reduce(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+void kmeans_linear::reduce(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
                          std::vector<size_t> &cols_output, size_t reduce_i) {
     // n rows, m columns.
     // output is n rows and n columns.
@@ -129,7 +129,7 @@ void kmeans_fast::reduce(size_t row_multiplier, std::vector<size_t> &cols, size_
     }
 }
 
-void kmeans_fast::mincompute(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
+void kmeans_linear::mincompute(size_t row_multiplier, std::vector<size_t> &cols, size_t n, size_t m,
                              size_t reduce_i, std::vector<size_t> &cols_output) {
 #ifdef DEBUG_KMEANS
     printf("[mincompute] Called with n=%d, m=%d, reduce_i=%d\n", n, m, reduce_i);
@@ -207,7 +207,7 @@ void kmeans_fast::mincompute(size_t row_multiplier, std::vector<size_t> &cols, s
     return;
 }
 
-void kmeans_fast::fill_row(size_t k) {
+void kmeans_linear::fill_row(size_t k) {
     std::vector<size_t> cols(n, 0);
     std::vector<size_t> output(n, 0);
     for (size_t i = 0; i < n; ++i) {
@@ -236,24 +236,11 @@ void kmeans_fast::fill_row(size_t k) {
     }
 }
 
-void kmeans_fast::base_case(size_t k) {
+void kmeans_linear::base_case(size_t k) {
     for (size_t i = 0; i < n; ++i) {
         double cost = is.cost_interval_l2(0, i);
         row[i] = cost;
     }
     row[0] = 0.0;
-}
-
-static double kmeans_object_oriented(double *points_ptr, size_t n,
-                                     double *last_row, size_t k) {
-    std::vector<double> points(n, 0);
-    for (size_t i = 0; i < n; ++i) points[i] = points_ptr[i];
-    kmeans_fast kmeans_algorithm(points);
-    std::unique_ptr<kmeans_result> kmeans_res = kmeans_algorithm.compute(k);
-    return kmeans_res->cost;
-}
-
-kmeans_fn get_kmeans_fast() {
-    return kmeans_object_oriented;
 }
 

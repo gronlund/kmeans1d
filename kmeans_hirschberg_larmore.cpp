@@ -214,5 +214,3 @@ std::pair<double, size_t> kmeans_hirschberg_larmore::traditional(size_t n) {
     }
     return std::make_pair(f[n-1], length);
 }
-
-
