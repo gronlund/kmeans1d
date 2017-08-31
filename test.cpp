@@ -28,7 +28,7 @@ void correctness_test_random() {
     std::unique_ptr<kmeans> fast(new kmeans_fast(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
     std::unique_ptr<kmeans> medi(new kmeans_medi(points));
-    std::unique_ptr<kmeans> hirc(new kmeans_hirschberg_larmore(points));
+    std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
 
     cout << "Running tests for fast, slow and medi algorithms." << endl;
     bool any_fail = false;
@@ -36,7 +36,7 @@ void correctness_test_random() {
         double fast_res = get_cost(*fast, k);
         double slow_res = get_cost(*slow, k);
         double medi_res = get_cost(*medi, k);
-        double hirc_res = get_cost(*hirc, k);
+        double wilber_res = get_cost(*wilber, k);
         bool fail = false;
         if (fast_res != slow_res) {
             cout << "[k = " << k << "] Test failed for fast" << endl;
@@ -50,17 +50,17 @@ void correctness_test_random() {
         } else {
             cout << "[k = " << k << "] Test succeeded for medi" << endl;
         }
-        if (slow_res != hirc_res) {
-            cout << "[k = " << k << "] Test failed for hirc" << endl;
+        if (slow_res != wilber_res) {
+            cout << "[k = " << k << "] Test failed for wilber" << endl;
             fail = true;
         } else {
-            cout << "[k = " << k << "] Test succeeded for hirc" << endl;
+            cout << "[k = " << k << "] Test succeeded for wilber" << endl;
         }
         if (fail) {
             any_fail = true;
             double diff_fast_slow = abs(fast_res - slow_res);
             double diff_medi_slow = abs(medi_res - slow_res);
-            double diff_hirc_slow = abs(hirc_res - slow_res);
+            double diff_wilber_slow = abs(wilber_res - slow_res);
 
             cout << "[k = " << k << "] Failed" << endl;
             cout << "Additional info below:" << endl;
@@ -71,7 +71,7 @@ void correctness_test_random() {
             cout << "|medi - slow| = " << setprecision(10) << diff_medi_slow << endl;
 
             cout << "[k = " << k << "] ";
-            cout << "|hirc - slow| = " << setprecision(10) << diff_hirc_slow << endl;
+            cout << "|wilber - slow| = " << setprecision(10) << diff_wilber_slow << endl;
         }
     }
     if (any_fail) {
@@ -163,13 +163,13 @@ void test_cluster_cost_equal_returned_cost() {
     std::unique_ptr<kmeans> fast(new kmeans_fast(points));
     std::unique_ptr<kmeans> slow(new kmeans_slow(points));
     std::unique_ptr<kmeans> medi(new kmeans_medi(points));
-    std::unique_ptr<kmeans> hirc(new kmeans_hirschberg_larmore(points));
+    std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
     bool fail = false;
     for (size_t k = 1; k < 10; ++k) {
         std::unique_ptr<kmeans_result> fast_res = fast->compute_and_report(k);
         std::unique_ptr<kmeans_result> medi_res = medi->compute_and_report(k);
         std::unique_ptr<kmeans_result> slow_res = slow->compute_and_report(k);
-        std::unique_ptr<kmeans_result> hirc_res = hirc->compute_and_report(k);
+        std::unique_ptr<kmeans_result> wilber_res = wilber->compute_and_report(k);
         std::stringstream ss;
         ss << prefix_template << "[ k = " << k << " ] ";
         std::string prefix = ss.str();
@@ -200,13 +200,13 @@ void test_cluster_cost_equal_returned_cost() {
                  << "  Computed cost " << get_cost(slow_res, points, k) << endl;
             fail = true;
         }
-        if (!check_clustering_size(hirc_res, points, k)) {
-            cout << prefix << "hirc clustering expected size " << k
-                 << " found size " << hirc_res->centers.size() << "." << endl;
+        if (!check_clustering_size(wilber_res, points, k)) {
+            cout << prefix << "wilber clustering expected size " << k
+                 << " found size " << wilber_res->centers.size() << "." << endl;
             fail = true;
-        } else if (!check_clustering_cost(hirc_res, points, k)) {
-            cout << prefix << "hirc clustering cost failed. Returned cost " << hirc_res->cost
-                 << "  Computed cost " << get_cost(hirc_res, points, k) << endl;
+        } else if (!check_clustering_cost(wilber_res, points, k)) {
+            cout << prefix << "wilber clustering cost failed. Returned cost " << wilber_res->cost
+                 << "  Computed cost " << get_cost(wilber_res, points, k) << endl;
             fail = true;
         }
     }
@@ -225,7 +225,7 @@ void more_clusters_than_points() {
         std::shared_ptr<kmeans>(new kmeans_fast(points)),
         std::shared_ptr<kmeans>(new kmeans_slow(points)),
         std::shared_ptr<kmeans>(new kmeans_medi(points)),
-        std::shared_ptr<kmeans>(new kmeans_hirschberg_larmore(points)),
+        std::shared_ptr<kmeans>(new kmeans_wilber(points)),
         std::shared_ptr<kmeans>(new kmeans_lloyd_slow(points)),
         std::shared_ptr<kmeans>(new kmeans_lloyd_fast(points))
     };

@@ -1,5 +1,5 @@
 OBJS := kmeans_dp.o kmeans_slow.o kmeans_fast.o kmeans_medi.o \
-	kmeans_lloyd.o kmeans_hirschberg_larmore.o \
+	kmeans_lloyd.o kmeans_hirschberg_larmore.o kmeans_wilber.o \
 	interval_sum.o
 CXXFLAGS_RELEASE := -Wall -Wextra -fPIE -O2
 CXXFLAGS_DEBUG := -g -Wall -Wextra -fPIE -fsanitize=undefined -DDEBUG #-fsanitize=address
