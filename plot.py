@@ -6,13 +6,13 @@ import numpy as np
 
 CLOCKS_PER_SEC = 1000000
 
+
 def main(k_plot, constant=False, csvfilename='timing.csv'):
     with open(csvfilename) as time_file:
         csv_reader = csv.reader(time_file)
         fasts = []
         medis = []
         ns = []
-        first = True
         headers = next(csv_reader)
         for row in csv_reader:
             n = int(row[0].strip())

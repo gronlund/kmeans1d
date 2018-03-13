@@ -38,8 +38,10 @@ dots_per_inch = 72.27
 width = 469.75502 / dots_per_inch / 2
 height = width
 
+
 def make_legend():
     return
+
 
 def show_fixed_k(data, k):
     fig = plt.figure(figsize=(width, height))
