@@ -13,6 +13,19 @@ double get_cost(kmeans &km, size_t k) {
     return res->cost;
 }
 
+void correctness_test_no_lambda_difference() {
+
+    std::vector<double> points = {
+        1, 2, 3,
+        101, 102, 103,
+        201, 202, 203,
+    };
+    std::unique_ptr<kmeans> wilber(new kmeans_wilber(points));
+    size_t k = 5;
+    double res = get_cost(*wilber, k);
+    std::cout << "correctness no lambda difference works" << std::endl;
+}
+
 void correctness_test_random() {
     std::vector<double> points = {0.0041841036041334601, 0.016864905913439476,
                                   0.091539430201843741, 0.11167850389725253,
@@ -250,6 +263,7 @@ int main(int argc, char *argv[]) {
         correctness_lloyd();
         more_clusters_than_points();
         test_cluster_cost_equal_returned_cost();
+        correctness_test_no_lambda_difference();
         return 0;
     }
     if (argc == 1) {
