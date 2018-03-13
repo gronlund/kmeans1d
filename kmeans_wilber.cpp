@@ -53,6 +53,12 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
 
         std::tie(val_found, k_found) = this->wilber(n);
+        if (k_found == hi_k) {
+            // infinite loop. lambda intervals are empty between
+            // hi_k and lo_k.
+            k_found = k;
+            break;
+        }
         if (k_found > k) {
             lo_k = k_found;
             lo = lambda;
