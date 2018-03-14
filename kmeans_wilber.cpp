@@ -5,51 +5,61 @@
 
 #include "kmeans.h"
 
+void kmeans_wilber::set_search_strategy(search_strategy strat) {
+    std::cout << "setting search strategy to: " << strat << std::endl;
+    this->search_strat = strat;
+}
+
 kmeans_wilber::kmeans_wilber(const std::vector<double> &points) :
     f(points.size() + 1, 0.0), bestleft(points.size() + 1, 0),
-    is(points), points(points), n(points.size()) { }
+    is(points), points(points), n(points.size()), search_strat(search_strategy::INTERPOLATION) { }
 
 std::string kmeans_wilber::name() { return std::string("wilber"); }
 
-std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
+std::unique_ptr<kmeans_result> kmeans_wilber::compute_binary_search(size_t k) {
     std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
-    if (k >= n) {
-        kmeans_res->cost = 0.0;
-        kmeans_res->centers.resize(k);
-        for (size_t i = 0; i < n; ++i) {
-            kmeans_res->centers[i] = points[i];
-        }
-        for (size_t i = n; i < k; ++i) {
-            kmeans_res->centers[i] = points[n-1];
-        }
-        return kmeans_res;
-    }
-    if (k == 1) {
-        kmeans_res->cost = is.cost_interval_l2(0, n-1);
-        kmeans_res->centers.push_back(is.query(0, n) / ((double) n));
-        return kmeans_res;
-    }
-
     double lo = 0.0;
     double hi = is.cost_interval_l2(0, n-1);
-    double hi_intercept = hi;
+
+    size_t cnt = 0;
+    double val_found;
+    size_t k_found;
+    while (true) {
+        ++cnt;
+
+        lambda = lo + (hi-lo) / 2;
+        std::tie(val_found, k_found) = this->wilber(n);
+
+        if (k_found == k) {
+            break;
+        } else if (k_found < k) {
+            hi = lambda;
+        } else {  // k_found > k
+            lo = lambda;
+        }
+    }
+    get_actual_cost(n, kmeans_res);
+    return kmeans_res;
+}
+
+std::unique_ptr<kmeans_result> kmeans_wilber::compute_interpolation_search(size_t k) {
+    std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
+
+    double lo = 0.0;
     double lo_intercept = 0;
-    size_t hi_k = 1;
     size_t lo_k = n;
+
+    double hi = is.cost_interval_l2(0, n-1);
+    double hi_intercept = hi;
+    size_t hi_k = 1;
+
     //double hi = 1e-2;
 
-    double val_found, val_found2;
-    size_t k_found, k_found2;
+    double val_found;
+    size_t k_found;
     size_t cnt = 0;
     while (true) {
         ++cnt;
-        double t = (hi_intercept - lo_intercept) / sqrt(lo_k - hi_k);
-        double intercept_guess = (hi_intercept + lo_intercept) / 2;
-        double intersect_hi = (intercept_guess - hi_intercept) / (hi_k - k);
-        double intersect_lo = (intercept_guess - lo_intercept) / (lo_k - k);
-        assert(intercept_guess > 0);
-        assert(intercept_guess <= hi_intercept);
-        assert(intercept_guess >= lo_intercept);
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
 
         std::tie(val_found, k_found) = this->wilber(n);
@@ -75,6 +85,38 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
     assert(k == k_found);
     get_actual_cost(n, kmeans_res);
     return kmeans_res;
+
+}
+
+std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
+    std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
+    if (k >= n) {
+        kmeans_res->cost = 0.0;
+        kmeans_res->centers.resize(k);
+        for (size_t i = 0; i < n; ++i) {
+            kmeans_res->centers[i] = points[i];
+        }
+        for (size_t i = n; i < k; ++i) {
+            kmeans_res->centers[i] = points[n-1];
+        }
+        return kmeans_res;
+    }
+    if (k == 1) {
+        kmeans_res->cost = is.cost_interval_l2(0, n-1);
+        kmeans_res->centers.push_back(is.query(0, n) / ((double) n));
+        return kmeans_res;
+    }
+    switch (this->search_strat) {
+    case search_strategy::BINARY:
+        return compute_binary_search(k);
+        break;
+    case search_strategy::INTERPOLATION:
+        return compute_interpolation_search(k);
+        break;
+    default:
+        throw;
+    }
+
 }
 
 std::unique_ptr<kmeans_result> kmeans_wilber::compute_and_report(size_t k) {

@@ -51,12 +51,14 @@ private:
     std::size_t n;
 };
 
+enum search_strategy {BINARY = 0, INTERPOLATION = 1};
 class kmeans_wilber : public kmeans {
 public:
     kmeans_wilber(const std::vector<double> &points);
     std::unique_ptr<kmeans_result> compute(size_t k) override;
     std::unique_ptr<kmeans_result> compute_and_report(size_t k) override;
     std::string name() override;
+    void set_search_strategy(search_strategy);
 private:
     std::vector<double> smawk_naive(size_t i0, size_t i1, size_t j0, size_t j1, std::vector<size_t> &bl);
 
@@ -71,12 +73,16 @@ private:
     double weight(size_t i, size_t j);
     double g(size_t i, size_t j);
 
+    std::unique_ptr<kmeans_result> compute_binary_search(size_t k);
+    std::unique_ptr<kmeans_result> compute_interpolation_search(size_t k);
+
     double lambda;
     std::vector<double> f;
     std::vector<std::size_t> bestleft;
     interval_sum<double> is;
     std::vector<double> points;
     std::size_t n;
+    search_strategy search_strat;
 };
 
 class kmeans_dp : public kmeans {
