@@ -96,10 +96,43 @@ vector<double> generate(size_t n) {
     return res;
 }
 
+struct kmeans_wilber_binary {};
+struct kmeans_wilber_interpolation {};
+
 template<typename alg>
 std::chrono::milliseconds time_compute(vector<double> &points, size_t k) {
     auto start = std::chrono::high_resolution_clock::now();
     unique_ptr<kmeans> f(new alg(points));
+    unique_ptr<kmeans_result> res = f->compute(k);
+    auto end = std::chrono::high_resolution_clock::now();
+    omp_set_lock(&lock);
+    std::cout << "[" << f->name() << "] "
+              << "[k = " << k << "] [n = " << points.size() << "] "
+              << "[cost = " << res->cost << "]" << std::endl;
+    omp_unset_lock(&lock);
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+}
+
+template<>
+std::chrono::milliseconds time_compute<kmeans_wilber_binary>(vector<double> &points, size_t k) {
+    auto start = std::chrono::high_resolution_clock::now();
+    unique_ptr<kmeans_wilber> f(new kmeans_wilber(points));
+    f->set_search_strategy(search_strategy::BINARY);
+    unique_ptr<kmeans_result> res = f->compute(k);
+    auto end = std::chrono::high_resolution_clock::now();
+    omp_set_lock(&lock);
+    std::cout << "[" << f->name() << "] "
+              << "[k = " << k << "] [n = " << points.size() << "] "
+              << "[cost = " << res->cost << "]" << std::endl;
+    omp_unset_lock(&lock);
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+}
+
+template<>
+std::chrono::milliseconds time_compute<kmeans_wilber_interpolation>(vector<double> &points, size_t k) {
+    auto start = std::chrono::high_resolution_clock::now();
+    unique_ptr<kmeans_wilber> f(new kmeans_wilber(points));
+    f->set_search_strategy(search_strategy::INTERPOLATION);
     unique_ptr<kmeans_result> res = f->compute(k);
     auto end = std::chrono::high_resolution_clock::now();
     omp_set_lock(&lock);
@@ -134,12 +167,12 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
     }
     omp_init_lock(&lock);
     for (size_t n = start; ; n += increment) {
-        vector<double> points = generate(n);
+        vector<double> points = g->generate(n);
 
         for (size_t i = 0; i < ks.size(); ++i) {
             size_t k = ks[i];
             std::chrono::milliseconds linear_time, monotone_time, linear_time_report, monotone_time_report;
-            std::chrono::milliseconds lloyd_time_report, wilber_time;
+            std::chrono::milliseconds lloyd_time_report, wilber_time, wilber_binary_time;
 
 #pragma omp parallel for
             for (size_t alg = 0; alg < 6; ++alg) {
@@ -160,7 +193,10 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
                     lloyd_time_report = time_compute_and_report<kmeans_lloyd_fast>(points, k);
                     break;
                 case 5:
-                    wilber_time = time_compute_and_report<kmeans_wilber>(points, k);
+                    wilber_time = time_compute<kmeans_wilber_interpolation>(points, k);
+                    break;
+                case 6:
+                    wilber_binary_time = time_compute<kmeans_wilber_binary>(points, k);
                     break;
                 }
             }
