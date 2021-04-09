@@ -38,7 +38,7 @@ void kmeans_monotone::fill_row_rec(size_t begin, size_t end, size_t k,
 
         double cost_last_cluster = is.cost_interval_l2(s, mid);
 	if(cost_last_cluster < 0){
-	  std::cout << "what last cluster fuck -  " << cost_last_cluster << " " << s << " " << mid << std::endl;
+	  std::cout << "what is going on here -  " << cost_last_cluster << " " << s << " " << mid << std::endl;
 
 	  assert(false);
 	}

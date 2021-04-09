@@ -168,6 +168,9 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
     omp_init_lock(&my_lock);
     for (size_t n = start; ; n += increment) {
         vector<double> points = g->generate(n);
+	if(!std::is_sorted(std::begin(points), std::end(points))){
+	  std::cout << "input not sorted " << std::endl;
+	  return;
 
         for (size_t i = 0; i < ks.size(); ++i) {
             size_t k = ks[i];
