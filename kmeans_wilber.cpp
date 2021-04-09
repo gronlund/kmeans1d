@@ -1,9 +1,19 @@
 #include <cassert>
 #include <limits>
 #include <iostream>
+#include <iomanip> 
 #include <vector>
-
+#include <algorithm>
 #include "kmeans.h"
+
+template <typename T>
+void print_vector(const std::vector<T> & vec, std::string sep=", "){
+    for(auto elem : vec)
+    {
+        std::cout << elem << sep;
+    }
+    std::cout<<std::endl;
+}
 
 void kmeans_wilber::set_search_strategy(search_strategy strat) {
     std::cout << "setting search strategy to: " << strat << std::endl;
@@ -42,7 +52,56 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute_binary_search(size_t k) {
     return kmeans_res;
 }
 
-std::unique_ptr<kmeans_result> kmeans_wilber::compute_interpolation_search(size_t k) {
+std::unique_ptr<kmeans_result> kmeans_wilber::compute_interpolation_search_with_noise(size_t k, double lambda_fail){
+  //const double scale = std::max(double(points.size())*1000, 1000000.0)
+  //std::cout << "search with random noise added to deal with special case the easy way - k: " << k << std::endl;
+  float range;
+  double scale_const = 1.0;// mayeb just do sqrt of epsilon
+  double eps = std::numeric_limits<double>::epsilon();
+  double sqeps = sqrt(eps);
+  
+  // (x-eps - m)^2 = (x-eps)^2 + m^2 - 2m (x-eps) = x^2 - eps^2 + 2 eps x ... = (x-m)^2 - eps^2
+  if(lambda_fail >= 1){
+    range = sqeps * sqrt(lambda_fail) * scale_const;
+  }
+  else{
+    range = sqeps * scale_const;
+  }
+  //range = std::min(range, 
+  //std::cout << "what is range " << range << std::endl;
+  std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  std::mt19937 generator(rd()); //Standard mersenne_twister_engine seeded with rd()
+  //std::default_random_engine generator;
+  //std::cout << std::setprecision(10);
+  std::unique_ptr<kmeans_result> noise_res;//(new kmeans_result);
+  size_t retries = 10;
+  bool succ=false;
+  for(size_t i=0;i < retries; ++i){
+    std::uniform_real_distribution<> dis(-range, range);
+    std::vector<double> new_points(points.size(), 0.0);
+    for(size_t i=0; i<points.size(); ++i){
+      new_points[i] = points[i] + dis(generator);    
+      //std::cout << "new point and old point " << new_points[i] << " " << points[i] << std::endl;
+    }
+    std::sort(new_points.begin(), new_points.end());
+    std::unique_ptr<kmeans_wilber> noise_wilber(new kmeans_wilber(new_points));
+    std::tie(noise_res, succ) = noise_wilber->compute_interpolation_search(k, false);
+    if(succ){
+      //std::cout << "noise success " << std::endl;
+      bestleft = std::move(noise_wilber->bestleft);
+      break;      
+    }
+    else{
+      std::cout << "noise fail - try again - scale noise range by 1.5" << std::endl;
+      range = range * 1.5;
+    }
+  }
+  assert(succ);
+  return noise_res;
+}
+
+
+std::pair<std::unique_ptr<kmeans_result>, bool> kmeans_wilber::compute_interpolation_search(size_t k, bool add_noise_if_loop=false) {
     std::unique_ptr<kmeans_result> kmeans_res(new kmeans_result);
 
     double lo = 0.0;
@@ -58,16 +117,29 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute_interpolation_search(size_
     double val_found;
     size_t k_found;
     size_t cnt = 0;
+    
     while (true) {
         ++cnt;
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
 
         std::tie(val_found, k_found) = this->wilber(n);
-        if (k_found == hi_k) {
-            // infinite loop. lambda intervals are empty between
-            // hi_k and lo_k.
-            k_found = k;
-            break;
+	//if (k_found < hi_k || k_found > lo_k) {
+	//std::cout << "k_found outside range - numerical issues/empty lambda intervals " << std::endl;
+	//print_vector(points);
+	//assert(false);
+	//}
+        if (k_found <= hi_k || k_found >= lo_k) {
+	  std::cout << "[Warning: K Found Outside search range - Empty Lambda Interval or numerical issues - Fix It with noise]" << std::endl;
+	  std::cout << std::setprecision(20);
+	  std::cout << "stats [k_found, k-range searched] " << k_found << " - (" << hi_k << " ,  " << lo_k << " ) - lambda " << lambda << std::endl;
+	  // infinite loop. lambda intervals are empty between hi_k and lo_k. Add noise if allowed
+	  if(add_noise_if_loop){
+	    kmeans_res = compute_interpolation_search_with_noise(k, lambda);
+	    k_found = k;
+	  }
+	  else{
+	    return std::make_pair(std::move(kmeans_res), false);
+	  }	  
         }
         if (k_found > k) {
             lo_k = k_found;
@@ -81,10 +153,15 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute_interpolation_search(size_
             hi = lambda;
             break;
         }
-    }
+	if(cnt > 100){
+	  std::cout << "[Warning: More than 100 steps - breaking] "<< std::endl;
+	  assert(false);
+	}
+    }   
     assert(k == k_found);
     get_actual_cost(n, kmeans_res);
-    return kmeans_res;
+    assert(kmeans_res->centers.size() == k);
+    return std::make_pair(std::move(kmeans_res), true);
 
 }
 
@@ -106,13 +183,16 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
         kmeans_res->centers.push_back(is.query(0, n) / ((double) n));
         return kmeans_res;
     }
+    assert(std::is_sorted(points.begin(), points.end()));
+    bool succ;
     switch (this->search_strat) {
     case search_strategy::BINARY:
-        return compute_binary_search(k);
-        break;
+      return compute_binary_search(k);
+      break;
     case search_strategy::INTERPOLATION:
-        return compute_interpolation_search(k);
-        break;
+      std::tie(kmeans_res, succ) = compute_interpolation_search(k, true);
+      return kmeans_res;
+      break;
     default:
         throw;
     }
@@ -137,8 +217,12 @@ double kmeans_wilber::get_actual_cost(size_t n, std::unique_ptr<kmeans_result> &
     size_t m = n;
 
     std::vector<double> centers;
+    std::vector<size_t> path;
+    //res->path.clear();
+    res->path.push_back(m);
     while (m != 0) {
         size_t prev = bestleft[m];
+	res->path.push_back(prev);
         cost += is.cost_interval_l2(prev, m-1);
         double avg = is.query(prev, m) / (m - prev);
         centers.push_back(avg);
@@ -267,7 +351,7 @@ std::vector<double> kmeans_wilber::smawk_naive(size_t i0, size_t i1, size_t j0, 
 }
 
 std::pair<double, size_t> kmeans_wilber::wilber(size_t n) {
-    std::cout << "call " << name() << " with lambda=" << lambda << std::endl;
+  //std::cout << "call " << name() << " with lambda=" << lambda << std::endl;
     f.resize(n+1, 0);
     bestleft.resize(n+1, 0);
     f[0] = 0;
@@ -282,14 +366,14 @@ std::pair<double, size_t> kmeans_wilber::wilber(size_t n) {
             std::vector<size_t> bl;
             std::vector<double> column_minima = smawk(r, c, c+1, p, bl);
             for (size_t j = c+1; j <= p; ++j) {
-                f[j] = column_minima[j-(c+1)];
-                bestleft[j] = bl[j-(c+1)];
+                f[j] = column_minima[j - ( c + 1)];
+                bestleft[j] = bl[j - ( c + 1)];
             }
         }
         // step 3
         if (c+1 <= p-1) {
             std::vector<size_t> bl;
-            std::vector<double> H = smawk(c+1, p-1, c+2, p, bl);
+            std::vector<double> H = smawk(c + 1, p - 1, c + 2, p, bl);
             // step 4
             size_t j0 = p+1;
             for (size_t j = p; j >= c+2; --j) {

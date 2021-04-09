@@ -14,8 +14,9 @@
 
 class kmeans_result {
 public:
-    double cost;
-    std::vector<double> centers;
+  double cost;
+  std::vector<double> centers;
+  std::vector<size_t> path;
 };
 
 class kmeans {
@@ -74,15 +75,19 @@ private:
     double g(size_t i, size_t j);
 
     std::unique_ptr<kmeans_result> compute_binary_search(size_t k);
-    std::unique_ptr<kmeans_result> compute_interpolation_search(size_t k);
+    std::pair<std::unique_ptr<kmeans_result>, bool> compute_interpolation_search(size_t k, bool add_noise_if_loop);
+    std::unique_ptr<kmeans_result> compute_interpolation_search_with_noise(size_t k, double lambda);
 
-    double lambda;
-    std::vector<double> f;
-    std::vector<std::size_t> bestleft;
-    interval_sum<double> is;
-    std::vector<double> points;
-    std::size_t n;
-    search_strategy search_strat;
+  
+  double lambda;//what is that used for
+  std::vector<double> f; // internal array for wilbers algorithm only updated in wilber
+  std::vector<std::size_t> bestleft; //shortest path from wilber - only updated in wilbur
+  interval_sum<double> is; // cluster cost data structure based on prefix sums
+  std::vector<double> points;// input data - assume sorted
+  std::size_t n; // data size - why
+  search_strategy search_strat; //Interpolation as standard - binary only used for comparison in paper
+
+  
 };
 
 class kmeans_dp : public kmeans {
@@ -92,8 +97,8 @@ public:
     virtual std::unique_ptr<kmeans_result> compute(size_t k) = 0;
     std::unique_ptr<kmeans_result> compute_and_report(size_t k) override;
     virtual std::unique_ptr<kmeans_dp> get_instance(std::vector<double> &points) = 0;
-    double report(std::vector<double> &points, size_t k, std::vector<double> &centers);
-protected:
+  double report(std::vector<double> &points, size_t k, std::vector<double> &centers);
+  //protected:
     interval_sum<double> is;
     std::vector<double> row;
     std::vector<double> row_prev;

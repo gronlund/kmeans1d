@@ -7,6 +7,14 @@
  * This code implements the divide-and-conquer algorithm
  * for computing k-means.
  */
+template <typename T>
+void print_vector(const std::vector<T> & vec, std::string sep=", "){
+    for(auto elem : vec)
+    {
+        std::cout << elem << sep;
+    }
+    std::cout<<std::endl;
+}
 
 
 kmeans_monotone::kmeans_monotone(const std::vector<double> &points) : kmeans_dp(points) { }
@@ -20,13 +28,29 @@ void kmeans_monotone::fill_row_rec(size_t begin, size_t end, size_t k,
                                int64_t split_left, int64_t split_right) {
 
     size_t mid = (begin+end)/2;
+    //if(mid == 0){
+    //std::cout << "can 0 be middle " << begin << " " << end << " " << std::endl;
+    //}
     double oo = std::numeric_limits<double>::max();
     double best = oo;
     int64_t best_split = mid;
     for (int64_t s = split_left; s <= split_right && s <= mid; ++s) {
+
         double cost_last_cluster = is.cost_interval_l2(s, mid);
-        double cost_before = row_prev[s-1];
-        double cost;
+	if(cost_last_cluster < 0){
+	  std::cout << "what last cluster fuck -  " << cost_last_cluster << " " << s << " " << mid << std::endl;
+
+	  assert(false);
+	}
+        double cost_before = 0.0;
+	if(s > 0){
+	  cost_before = row_prev[s-1];//out of bounds on that one
+	}
+        double cost = oo;
+	//if(mid == 0){
+	  //std::cout << "can 0 be middle and in loop " << cost_last_cluster << " " << cost_before << " " << best << " s: " << s << std::endl;	
+	//}
+	
         if (cost_before == oo || cost_last_cluster == oo) {
             cost = oo;
         } else {
@@ -36,10 +60,20 @@ void kmeans_monotone::fill_row_rec(size_t begin, size_t end, size_t k,
             best = cost;
             best_split = s;
         }
+	if(best < 0){
+	  std::cout << "what tge fyck A -  " << best << " " << best_split << " " << cost_before << " " << cost_last_cluster << std::endl;
+	  assert(false);
+	}
+
+    }
+    if(best < 0){
+      std::cout << "what tge fyck B " << best << " " << best_split << " " << std::endl;
+      assert(false);
     }
 
+    //std::cout << "updating " << mid << ": " << best << std::endl;
     row[mid] = best;
-
+    assert(best >=0.0);
     if (mid != begin) {
         fill_row_rec(begin, mid, k, split_left, best_split);
     }
@@ -61,8 +95,12 @@ std::unique_ptr<kmeans_result> kmeans_monotone::compute(size_t k) {
     row[0] = 0.0;
 
     for (size_t _k = 2; _k <= k; ++_k) {
-        std::swap(row, row_prev);
-        fill_row(_k);
+      //std::cout << "_k is " << _k << " show next row " << std::endl;
+      //print_vector(row_prev);
+      std::swap(row, row_prev);
+      fill_row(_k);
+      //std::cout << "_k is " << _k << " show new filled row " << std::endl;
+      //print_vector(row);
     }
     res->cost = row[n-1];
     return res;

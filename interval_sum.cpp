@@ -48,18 +48,19 @@ T interval_sum<T>::query(size_t i, size_t j) const {
  */
 template<typename T>
 T interval_sum<T>::cost_interval_l2(size_t start, size_t i) const {
-    //std::cout << "start = " << start << "    i = " << i << std::endl;
-    T suffix_sum = this->query(start, i+1);
-    T suffix_sq = this->query_sq(start, i+1);
-    //std::cout << "suffix_sum    = " << suffix_sum << std::endl;
-    //std::cout << "suffix_sum_sq = " << suffix_sq << std::endl;
-    size_t length = i-start+1;
-    //std::cout << "length        = " << length << std::endl;
-    T mean = suffix_sum / length;
-    //std::cout << "mean          = " << mean << std::endl;
-    T interval_cost = suffix_sq + mean*mean*length - 2 * suffix_sum * mean;
-    //std::cout << "interval_cost = " << interval_cost << std::endl;
-    return interval_cost;
+  if(i <= start){ return 0.0;}
+  //std::cout << "start = " << start << "    i = " << i << std::endl;
+  T suffix_sum = this->query(start, i+1);
+  T suffix_sq = this->query_sq(start, i+1);
+  //std::cout << "suffix_sum    = " << suffix_sum << std::endl;
+  //std::cout << "suffix_sum_sq = " << suffix_sq << std::endl;
+  size_t length = i-start+1;
+  //std::cout << "length        = " << length << std::endl;
+  T mean = suffix_sum / length;
+  //std::cout << "mean          = " << mean << std::endl;
+  T interval_cost = suffix_sq + mean*mean*length - 2 * suffix_sum * mean;
+  //std::cout << "interval_cost = " << interval_cost << std::endl;
+  return interval_cost;
 }
 
 /**

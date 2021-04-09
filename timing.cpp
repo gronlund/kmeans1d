@@ -18,7 +18,7 @@ static std::string datafile_name = "data.csv";
 static size_t start = 1000000;
 static size_t increment = 10000000;
 
-static omp_lock_t lock;
+static omp_lock_t my_lock;
 
 class input_generator {
 public:
@@ -105,11 +105,11 @@ std::chrono::milliseconds time_compute(vector<double> &points, size_t k) {
     unique_ptr<kmeans> f(new alg(points));
     unique_ptr<kmeans_result> res = f->compute(k);
     auto end = std::chrono::high_resolution_clock::now();
-    omp_set_lock(&lock);
+    omp_set_lock(&my_lock);
     std::cout << "[" << f->name() << "] "
               << "[k = " << k << "] [n = " << points.size() << "] "
               << "[cost = " << res->cost << "]" << std::endl;
-    omp_unset_lock(&lock);
+    omp_unset_lock(&my_lock);
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 }
 
@@ -120,11 +120,11 @@ std::chrono::milliseconds time_compute<kmeans_wilber_binary>(vector<double> &poi
     f->set_search_strategy(search_strategy::BINARY);
     unique_ptr<kmeans_result> res = f->compute(k);
     auto end = std::chrono::high_resolution_clock::now();
-    omp_set_lock(&lock);
+    omp_set_lock(&my_lock);
     std::cout << "[" << f->name() << "] "
               << "[k = " << k << "] [n = " << points.size() << "] "
               << "[cost = " << res->cost << "]" << std::endl;
-    omp_unset_lock(&lock);
+    omp_unset_lock(&my_lock);
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 }
 
@@ -135,11 +135,11 @@ std::chrono::milliseconds time_compute<kmeans_wilber_interpolation>(vector<doubl
     f->set_search_strategy(search_strategy::INTERPOLATION);
     unique_ptr<kmeans_result> res = f->compute(k);
     auto end = std::chrono::high_resolution_clock::now();
-    omp_set_lock(&lock);
+    omp_set_lock(&my_lock);
     std::cout << "[" << f->name() << "] "
               << "[k = " << k << "] [n = " << points.size() << "] "
               << "[cost = " << res->cost << "]" << std::endl;
-    omp_unset_lock(&lock);
+    omp_unset_lock(&my_lock);
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 }
 
@@ -149,11 +149,11 @@ std::chrono::milliseconds time_compute_and_report(vector<double> &points, size_t
     unique_ptr<kmeans> f(new alg(points));
     unique_ptr<kmeans_result> res = f->compute_and_report(k);
     auto end = std::chrono::high_resolution_clock::now();
-    omp_set_lock(&lock);
+    omp_set_lock(&my_lock);
     std::cout << "[" << f->name() << "] "
               << "[k = " << k << "] [n = " << points.size() << "] "
               << "[cost = " << res->cost << "]" << std::endl;
-    omp_unset_lock(&lock);
+    omp_unset_lock(&my_lock);
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 }
 
@@ -165,7 +165,7 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
         ofstream f(datafile_name, ios_base::out);
         f << "n,k,dp-linear,dp-monotone,dp-linear-hirsch,dp-monotone-hirsch,lloyd_report,wilber" << std::endl;
     }
-    omp_init_lock(&lock);
+    omp_init_lock(&my_lock);
     for (size_t n = start; ; n += increment) {
         vector<double> points = g->generate(n);
 
@@ -200,7 +200,7 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
                     break;
                 }
             }
-            omp_set_lock(&lock);
+            omp_set_lock(&my_lock);
             {
                 ofstream f(datafile_name, ios_base::app);
                 f << n << "," << k << ","
@@ -211,7 +211,7 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
                   << lloyd_time_report.count() << ","
                   << wilber_time.count() << endl;
             }
-            omp_unset_lock(&lock);
+            omp_unset_lock(&my_lock);
         }
 
     }
