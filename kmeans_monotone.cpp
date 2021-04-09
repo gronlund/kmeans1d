@@ -1,5 +1,5 @@
 #include "kmeans.h"
-
+#include <cassert>
 #include <iostream>
 #include <limits>
 #include <memory>

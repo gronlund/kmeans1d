@@ -4,6 +4,7 @@
 #include <iomanip> 
 #include <vector>
 #include <algorithm>
+#include <cassert>
 #include "kmeans.h"
 
 template <typename T>
