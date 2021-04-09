@@ -171,7 +171,7 @@ int run(std::unique_ptr<input_generator> const &g, std::string outfilename) {
 	if(!std::is_sorted(std::begin(points), std::end(points))){
 	  std::cout << "input not sorted " << std::endl;
 	  return;
-
+	}
         for (size_t i = 0; i < ks.size(); ++i) {
             size_t k = ks[i];
             std::chrono::milliseconds linear_time, monotone_time, linear_time_report, monotone_time_report;
