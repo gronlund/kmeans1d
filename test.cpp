@@ -3,7 +3,8 @@
 #include <tuple>
 #include <typeinfo>
 #include <sstream>
-
+#include <cassert>
+#include <algorithm>
 #include "kmeans.h"
 
 using namespace std;
