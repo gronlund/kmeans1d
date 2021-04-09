@@ -15,8 +15,8 @@
 using namespace std;
 
 static std::string datafile_name = "data.csv";
-static size_t start = 1000000;
-static size_t increment = 10000000;
+static size_t start = 10000;
+static size_t increment = 100000;
 
 static omp_lock_t my_lock;
 
@@ -39,7 +39,7 @@ public:
     vector<double> generate(size_t n) override {
         mt19937 mt(time(0));
         vector<double> res(n, 0);
-        double factor = 1e6;
+        double factor = 1e4;
         double maximum = 0;
         for (size_t i = 0; i < n; ++i) {
             res[i] = mt();
@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
     if (argc > 1) {
         if (argv[1] == "uniform") {
             generator = std::move(std::unique_ptr<input_generator>(new input_generator_uniform()));
-            outfilename = datafile_name;
+            outfilename = "timings_uniform.csv";
         } else if (argv[1] == "gauss-mixture") {
             generator = std::move(std::unique_ptr<input_generator>(new input_generator_gauss_mixture()));
             outfilename = "timings_gauss.csv";

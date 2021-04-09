@@ -54,12 +54,16 @@ T interval_sum<T>::cost_interval_l2(size_t start, size_t i) const {
   T suffix_sq = this->query_sq(start, i+1);
   //std::cout << "suffix_sum    = " << suffix_sum << std::endl;
   //std::cout << "suffix_sum_sq = " << suffix_sq << std::endl;
-  size_t length = i-start+1;
+  size_t length = i - start + 1;
   //std::cout << "length        = " << length << std::endl;
   T mean = suffix_sum / length;
   //std::cout << "mean          = " << mean << std::endl;
-  T interval_cost = suffix_sq + mean*mean*length - 2 * suffix_sum * mean;
+  T interval_cost = suffix_sq + mean * mean * length - 2 * suffix_sum * mean;
   //std::cout << "interval_cost = " << interval_cost << std::endl;
+  if(interval_cost < 0){
+    // numerical issues
+    return 0.0;
+  }
   return interval_cost;
 }
 
@@ -68,7 +72,7 @@ T interval_sum<T>::cost_interval_l2(size_t start, size_t i) const {
  */
 template<typename T>
 T interval_sum<T>::mean(size_t i, size_t j) const {
-    assert(i <= j);
+    //assert(i <= j);
     return this->query(i, j+1) / (j - i + 1);
 }
 

@@ -120,19 +120,16 @@ std::pair<std::unique_ptr<kmeans_result>, bool> kmeans_wilber::compute_interpola
     size_t cnt = 0;
     
     while (true) {
-        ++cnt;
+         ++cnt;
+	 //std::cout << "\r" << "[Step = " << cnt <<  ", k_found = " << k << "]" << std::flush;
+
         lambda = (hi_intercept - lo_intercept) / (lo_k - hi_k);
 
         std::tie(val_found, k_found) = this->wilber(n);
-	//if (k_found < hi_k || k_found > lo_k) {
-	//std::cout << "k_found outside range - numerical issues/empty lambda intervals " << std::endl;
-	//print_vector(points);
-	//assert(false);
-	//}
         if (k_found <= hi_k || k_found >= lo_k) {
-	  std::cout << "[Warning: K Found Outside search range - Empty Lambda Interval or numerical issues - Fix It with noise]" << std::endl;
-	  std::cout << std::setprecision(20);
-	  std::cout << "stats [k_found, k-range searched] " << k_found << " - (" << hi_k << " ,  " << lo_k << " ) - lambda " << lambda << std::endl;
+	  std::cerr << "[Warning: K Found Outside search range - Empty Lambda Interval or numerical issues - Fix It with noise]" << std::endl;
+	  std::cerr << std::setprecision(20);
+	  std::cerr << "stats [k_found, k-range searched] " << k_found << " - (" << hi_k << " ,  " << lo_k << " ) - lambda " << lambda << std::endl;
 	  // infinite loop. lambda intervals are empty between hi_k and lo_k. Add noise if allowed
 	  if(add_noise_if_loop){
 	    kmeans_res = compute_interpolation_search_with_noise(k, lambda);
@@ -154,14 +151,12 @@ std::pair<std::unique_ptr<kmeans_result>, bool> kmeans_wilber::compute_interpola
             hi = lambda;
             break;
         }
-	if(cnt > 100){
-	  std::cout << "[Warning: More than 100 steps - breaking] "<< std::endl;
+	if(cnt > 1000){
+	  std::cout << "[Warning: More than 1000 steps - breaking] "<< std::endl;
 	  assert(false);
 	}
     }   
-    assert(k == k_found);
     get_actual_cost(n, kmeans_res);
-    assert(kmeans_res->centers.size() == k);
     return std::make_pair(std::move(kmeans_res), true);
 
 }
@@ -184,7 +179,6 @@ std::unique_ptr<kmeans_result> kmeans_wilber::compute(size_t k) {
         kmeans_res->centers.push_back(is.query(0, n) / ((double) n));
         return kmeans_res;
     }
-    assert(std::is_sorted(points.begin(), points.end()));
     bool succ;
     switch (this->search_strat) {
     case search_strategy::BINARY:
